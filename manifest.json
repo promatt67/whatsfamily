@@ -1,0 +1,23 @@
+{
+  "name": "WhatsFamily",
+  "short_name": "WhatsFamily",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#8A2BE2",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./icon001.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon001.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}
