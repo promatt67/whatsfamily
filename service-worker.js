@@ -60,12 +60,14 @@ self.addEventListener('notificationclick', (e) => {
 });
 
 // ==========================================
-// INTEGRATION DI FIREBASE MESSAGING IN BACKGROUND 🔔
+// ASCOLTO NOTIFICHE FIREBASE IN BACKGROUND 📬
 // ==========================================
+
+// Importa i componenti di Firebase necessari per lo sfondo
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
-// Configurazione Firebase identica al tuo index.html
+// Configurazione con le tue chiavi reali di WhatsFamily
 const firebaseConfig = {
     apiKey: "AIzaSyCMBZjMytN2Q9M6P1iT4vMx4q7y_nVgK8w",
     authDomain: "whatsfamily-d8aa6.firebaseapp.com",
@@ -75,23 +77,24 @@ const firebaseConfig = {
     appId: "1:414240543274:web:c9979a6dd3433af8e9a953"
 };
 
+// Inizializza Firebase all'interno dello stesso Service Worker
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// Gestisce la notifica quando l'app è chiusa o in background
+// Questo intercetta i messaggi quando lo schermo è SPENTO o l'app è CHIUSA
 messaging.onBackgroundMessage((payload) => {
-    console.log('[service-worker.js] Ricevuto messaggio in background: ', payload);
+    console.log('Notifica ricevuta mentre il telefono era spento:', payload);
 
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-        body: payload.notification.body,
-        icon: './icon001.png',
-        badge: './icon001.png',
-        vibrate: [300, 100, 300],
+    const titoloNotifica = payload.notification ? payload.notification.title : "💬 WhatsFamily 🏡";
+    const opzioniNotifica = {
+        body: payload.notification ? payload.notification.body : "Nuovo messaggio di famiglia in arrivo!",
+        icon: "./icon001.png",
+        badge: "./icon001.png",
         tag: "whatsfamily-alert",
         renotify: true,
-        requireInteraction: true
+        requireInteraction: true, // La notifica resta finché non la premi o la scarti
+        vibrate: [300, 100, 300]   // Vibrazione dedicata su Android
     };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    return self.registration.showNotification(titoloNotifica, opzioniNotifica);
 });
