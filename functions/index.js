@@ -12,32 +12,35 @@ exports.inviaNotificaChatPrivata = onDocumentCreated("chats/{chatId}/messages/{m
     const datiMessaggio = event.data.data();
     const chatId = event.params.chatId;
     
-    // Troviamo l'ID del destinatario confrontando i due UID presenti nell'ID della chat
+    // Identifichiamo il destinatario confrontando gli UID nell'ID stanza
     const partecipanti = chatId.split("_");
     const idDestinatario = partecipanti.find(uid => uid !== datiMessaggio.senderId);
     
     if (!idDestinatario) return null;
 
     try {
-        // Recuperiamo il documento del destinatario per controllare lo stato e il Token FCM
+        // Recuperiamo il documento del destinatario
         const userSnap = await db.collection("users").doc(idDestinatario).get();
-        if (!userSnap.exists) return null;
+        if (!userSnap.exists) {
+            console.log(`Documento utente ${idDestinatario} non trovato.`);
+            return null;
+        }
         
         const datiDestinatario = userSnap.data();
         
-        // Se il destinatario è già online nella nostra chat, non inviamo la notifica push
-        if (datiDestinatario.stato === "🟢 Online" && datiDestinatario.typingTo !== null) {
-            console.log("Utente online, notifica push non necessaria.");
+        // CORREZIONE: Inviamo SEMPRE se l'app è chiusa o se lo stato non è esplicitamente attivo sulla chat corrente
+        if (datiDestinatario.stato === "🟢 Online" && datiDestinatario.typingTo === datiMessaggio.senderId) {
+            console.log("L'utente sta già guardando questa chat. Notifica push saltata.");
             return null;
         }
 
         const tokenFCM = datiDestinatario.fcmToken;
         if (!tokenFCM) {
-            console.log("L'utente non ha un token di notifica registrato.");
+            console.log(`L'utente ${idDestinatario} non ha un fcmToken registrato.`);
             return null;
         }
 
-        // Recuperiamo il nome del mittente per personalizzare la notifica
+        // Recuperiamo il nome del mittente
         const mittenteSnap = await db.collection("users").doc(datiMessaggio.senderId).get();
         const nomeMittente = mittenteSnap.exists ? (mittenteSnap.data().nome || "Qualcuno") : "Un familiare";
 
@@ -46,7 +49,6 @@ exports.inviaNotificaChatPrivata = onDocumentCreated("chats/{chatId}/messages/{m
         else if (datiMessaggio.fileType === "video") testoNotifica = "🎥 Video";
         else if (datiMessaggio.fileType === "audio") testoNotifica = "🎙️ Vocale";
 
-        // Costruiamo il pacchetto della notifica
         const payload = {
             token: tokenFCM,
             notification: {
@@ -54,17 +56,15 @@ exports.inviaNotificaChatPrivata = onDocumentCreated("chats/{chatId}/messages/{m
                 body: testoNotifica
             },
             android: {
-                priority: "high", // Forza la sveglia del telefono anche in standby profondo (Doze Mode)
+                priority: "high",
                 notification: {
                     sound: "default",
-                    clickAction: "FLUTTER_NOTIFICATION_CLICK", // Standard per far aprire l'app al click
+                    clickAction: "FLUTTER_NOTIFICATION_CLICK",
                     icon: "stock_ticker_update"
                 }
             },
             webpush: {
-                headers: {
-                    Urgency: "high"
-                },
+                headers: { Urgency: "high" },
                 notification: {
                     icon: "/icon001.png",
                     badge: "/icon001.png",
@@ -87,14 +87,12 @@ exports.inviaNotificaGruppo = onDocumentCreated("groups/{groupId}/messages/{mess
     const groupId = event.params.groupId;
 
     try {
-        // Recuperiamo i dati del gruppo per sapere chi sono i membri
         const gruppoSnap = await db.collection("groups").doc(groupId).get();
         if (!gruppoSnap.exists) return null;
         
         const datiGruppo = gruppoSnap.data();
         const membri = datiGruppo.members || [];
 
-        // Recuperiamo il nome del mittente
         const mittenteSnap = await db.collection("users").doc(datiMessaggio.senderId).get();
         const nomeMittente = mittenteSnap.exists ? (mittenteSnap.data().nome || "Qualcuno") : "Un familiare";
 
@@ -103,7 +101,7 @@ exports.inviaNotificaGruppo = onDocumentCreated("groups/{groupId}/messages/{mess
         else if (datiMessaggio.fileType === "video") testoNotifica = "🎥 Video";
         else if (datiMessaggio.fileType === "audio") testoNotifica = "🎙️ Vocale";
 
-        // Troviamo i token di tutti i membri del gruppo tranne chi ha inviato il messaggio
+        // Filtriamo i membri validi escludendo il mittente
         const destinatariPromesse = membri
             .filter(uid => uid !== datiMessaggio.senderId)
             .map(uid => db.collection("users").doc(uid).get());
@@ -114,19 +112,18 @@ exports.inviaNotificaGruppo = onDocumentCreated("groups/{groupId}/messages/{mess
         utentiSnap.forEach(uSnap => {
             if (uSnap.exists) {
                 const datiU = uSnap.data();
-                // Inviamo solo a chi non è attivo in questo momento nella chat
-                if (datiU.fcmToken && datiU.stato !== "🟢 Online") {
+                // CORREZIONE: Prendiamo il token se esiste, ignorando lo stato bloccato
+                if (datiU.fcmToken) {
                     tokens.push(datiU.fcmToken);
                 }
             }
         });
 
         if (tokens.length === 0) {
-            console.log("Nessun destinatario offline nel gruppo.");
+            console.log("Nessun token valido trovato per i membri del gruppo.");
             return null;
         }
 
-        // Inviamo la notifica a tutti i token in un colpo solo
         const payload = {
             tokens: tokens,
             notification: {
@@ -135,14 +132,10 @@ exports.inviaNotificaGruppo = onDocumentCreated("groups/{groupId}/messages/{mess
             },
             android: {
                 priority: "high",
-                notification: {
-                    sound: "default"
-                }
+                notification: { sound: "default" }
             },
             webpush: {
-                headers: {
-                    Urgency: "high"
-                },
+                headers: { Urgency: "high" },
                 notification: {
                     icon: "/icon001.png",
                     badge: "/icon001.png"
@@ -151,7 +144,7 @@ exports.inviaNotificaGruppo = onDocumentCreated("groups/{groupId}/messages/{mess
         };
 
         const response = await messaging.sendEachForMulticast(payload);
-        console.log(`${response.successCount} notifiche di gruppo inviate con successo.`);
+        console.log(`${response.successCount} notifiche di gruppo inviate.`);
     } catch (error) {
         console.error("Errore nell'invio della notifica di gruppo:", error);
     }
