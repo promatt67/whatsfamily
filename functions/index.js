@@ -10,25 +10,24 @@ const messaging = getMessaging();
 // 1. NOTIFICHE PER LE CHAT PRIVATE 🔐
 exports.inviaNotificaChatPrivata = onDocumentCreated("chats/{chatId}/messages/{messageId}", async (event) => {
     const datiMessaggio = event.data.data();
-    const chatId = event.params.chatId;
+    if (!datiMessaggio) return null;
     
-    // Identifichiamo il destinatario confrontando gli UID nell'ID stanza
+    const chatId = event.params.chatId;
     const partecipanti = chatId.split("_");
     const idDestinatario = partecipanti.find(uid => uid !== datiMessaggio.senderId);
     
     if (!idDestinatario) return null;
 
     try {
-        // Recuperiamo il documento del destinatario
         const userSnap = await db.collection("users").doc(idDestinatario).get();
         if (!userSnap.exists) {
             console.log(`Documento utente ${idDestinatario} non trovato.`);
             return null;
         }
         
-        const datiDestinatario = userSnap.data();
+        const datiDestinatario = userSnap.data() || {};
         
-        // CORREZIONE: Inviamo SEMPRE se l'app è chiusa o se lo stato non è esplicitamente attivo sulla chat corrente
+        // Verifica se l'utente sta già attivamente guardando la conversazione
         if (datiDestinatario.stato === "🟢 Online" && datiDestinatario.typingTo === datiMessaggio.senderId) {
             console.log("L'utente sta già guardando questa chat. Notifica push saltata.");
             return null;
@@ -40,36 +39,27 @@ exports.inviaNotificaChatPrivata = onDocumentCreated("chats/{chatId}/messages/{m
             return null;
         }
 
-        // Recuperiamo il nome del mittente
         const mittenteSnap = await db.collection("users").doc(datiMessaggio.senderId).get();
-        const nomeMittente = mittenteSnap.exists ? (mittenteSnap.data().nome || "Qualcuno") : "Un familiare";
+        const nomeMittente = mittenteSnap.exists ? ((mittenteSnap.data() || {}).nome || "Qualcuno") : "Un familiare";
 
         let testoNotifica = datiMessaggio.text || "Ti ha inviato un file";
         if (datiMessaggio.fileType === "image") testoNotifica = "📷 Foto";
         else if (datiMessaggio.fileType === "video") testoNotifica = "🎥 Video";
         else if (datiMessaggio.fileType === "audio") testoNotifica = "🎙️ Vocale";
 
+        // STRUTTURA AD ALTA VELOCITÀ SENZA DOPPIONI
         const payload = {
             token: tokenFCM,
-            notification: {
+            data: {
                 title: `💬 ${nomeMittente}`,
-                body: testoNotifica
+                body: testoNotifica,
+                chatId: chatId
             },
             android: {
-                priority: "high",
-                notification: {
-                    sound: "default",
-                    clickAction: "FLUTTER_NOTIFICATION_CLICK",
-                    icon: "stock_ticker_update"
-                }
+                priority: "high"
             },
             webpush: {
-                headers: { Urgency: "high" },
-                notification: {
-                    icon: "/icon001.png",
-                    badge: "/icon001.png",
-                    requireInteraction: true
-                }
+                headers: { Urgency: "high" }
             }
         };
 
@@ -84,24 +74,25 @@ exports.inviaNotificaChatPrivata = onDocumentCreated("chats/{chatId}/messages/{m
 // 2. NOTIFICHE PER I GRUPPI DI FAMIGLIA 👥
 exports.inviaNotificaGruppo = onDocumentCreated("groups/{groupId}/messages/{messageId}", async (event) => {
     const datiMessaggio = event.data.data();
+    if (!datiMessaggio) return null;
+    
     const groupId = event.params.groupId;
 
     try {
         const gruppoSnap = await db.collection("groups").doc(groupId).get();
         if (!gruppoSnap.exists) return null;
         
-        const datiGruppo = gruppoSnap.data();
+        const datiGruppo = gruppoSnap.data() || {};
         const membri = datiGruppo.members || [];
 
         const mittenteSnap = await db.collection("users").doc(datiMessaggio.senderId).get();
-        const nomeMittente = mittenteSnap.exists ? (mittenteSnap.data().nome || "Qualcuno") : "Un familiare";
+        const nomeMittente = mittenteSnap.exists ? ((mittenteSnap.data() || {}).nome || "Qualcuno") : "Un familiare";
 
         let testoNotifica = datiMessaggio.text || "Ha inviato un file";
         if (datiMessaggio.fileType === "image") testoNotifica = "📷 Foto";
         else if (datiMessaggio.fileType === "video") testoNotifica = "🎥 Video";
         else if (datiMessaggio.fileType === "audio") testoNotifica = "🎙️ Vocale";
 
-        // Filtriamo i membri validi escludendo il mittente
         const destinatariPromesse = membri
             .filter(uid => uid !== datiMessaggio.senderId)
             .map(uid => db.collection("users").doc(uid).get());
@@ -111,8 +102,7 @@ exports.inviaNotificaGruppo = onDocumentCreated("groups/{groupId}/messages/{mess
 
         utentiSnap.forEach(uSnap => {
             if (uSnap.exists) {
-                const datiU = uSnap.data();
-                // CORREZIONE: Prendiamo il token se esiste, ignorando lo stato bloccato
+                const datiU = uSnap.data() || {};
                 if (datiU.fcmToken) {
                     tokens.push(datiU.fcmToken);
                 }
@@ -124,22 +114,19 @@ exports.inviaNotificaGruppo = onDocumentCreated("groups/{groupId}/messages/{mess
             return null;
         }
 
+        // STRUTTURA AD ALTA VELOCITÀ MULTICAST SENZA DOPPIONI
         const payload = {
             tokens: tokens,
-            notification: {
+            data: {
                 title: `👥 ${datiGruppo.name} (${nomeMittente})`,
-                body: testoNotifica
+                body: testoNotifica,
+                groupId: groupId
             },
             android: {
-                priority: "high",
-                notification: { sound: "default" }
+                priority: "high"
             },
             webpush: {
-                headers: { Urgency: "high" },
-                notification: {
-                    icon: "/icon001.png",
-                    badge: "/icon001.png"
-                }
+                headers: { Urgency: "high" }
             }
         };
 

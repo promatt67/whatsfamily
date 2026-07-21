@@ -2,12 +2,19 @@
 <html lang="it"> 
 <head> 
     <meta charset="UTF-8"> 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> 
-    <title>💬 Chat di Famiglia 🏡</title> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"> 
+    <title>💬 WhatsFamily 🏡</title> 
+     
+    <!-- Tag iOS PWA --> 
+    <meta name="apple-mobile-web-app-capable" content="yes"> 
+    <meta name="apple-mobile-web-app-status-bar-style" content="default"> 
+    <meta name="apple-mobile-web-app-title" content="WhatsFamily"> 
+    <link rel="apple-touch-icon" href="./icon001.png"> 
+     
     <link rel="manifest" href="manifest.json"> 
     <style> 
         /* ========================================== 
-           TAVOLOZZA DEI COLORI (VARIABILI CSS) 🎨 
+           TAVOLOZZA COLORI E TEMA CSS
            ========================================== */ 
         :root { 
             --bg-color: #f3f4f6; 
@@ -19,6 +26,8 @@
             --contact-hover: #f5f0ff; 
             --contact-active: #eaddff; 
             --input-bg: #f0f2f5; 
+            --msg-sent-bg: #8A2BE2; 
+            --msg-sent-text: #ffffff; 
             --msg-received-bg: #ffffff; 
             --msg-received-text: #1f2937; 
             --contact-name-color: #333333; 
@@ -30,7 +39,6 @@
             --audio-player-text: #1f2937; 
         } 
 
-        /* VERSIONE DARK MODE (TEMA SCURO) 🌙 */ 
         body.dark-mode { 
             --bg-color: #111827; 
             --box-bg: #1f2937; 
@@ -41,6 +49,8 @@
             --contact-hover: #312e81; 
             --contact-active: #4c1d95; 
             --input-bg: #1f2937; 
+            --msg-sent-bg: #8A2BE2; 
+            --msg-sent-text: #ffffff; 
             --msg-received-bg: #374151; 
             --msg-received-text: #f9fafb; 
             --contact-name-color: #f3f4f6; 
@@ -73,7 +83,7 @@
             color: var(--text-color); 
         } 
 
-        /* SCHERMATA DI LOGIN */ 
+        /* SCHERMATA LOGIN */
         #login-screen { 
             display: flex; 
             flex-direction: column; 
@@ -88,8 +98,8 @@
         .login-box { 
             background: var(--box-bg); 
             padding: 30px; 
-            border-radius: 12px; 
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
+            border-radius: 16px; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); 
             width: 100%; 
             max-width: 400px; 
             text-align: center; 
@@ -111,11 +121,6 @@
             border-radius: 8px; 
             font-size: 1rem; 
             outline: none; 
-            transition: border-color 0.2s; 
-        } 
-
-        .login-box input::placeholder { 
-            color: var(--placeholder-color); 
         } 
 
         .login-box input:focus { 
@@ -132,14 +137,44 @@
             font-size: 1rem; 
             cursor: pointer; 
             font-weight: bold; 
-            transition: background 0.2s; 
         } 
 
         .login-box button:hover { 
             background-color: #721ac7; 
         } 
 
-        /* STILI PER LA LISTA CONTATTI SELEZIONABILI */ 
+        /* LAYOUT CHAT */
+        #chat-screen { 
+            width: 100vw; 
+            height: 100dvh; 
+        } 
+
+        #main-layout { 
+            width: 100%; 
+            height: 100%; 
+            display: flex; 
+        } 
+
+        #contacts-panel { 
+            width: 350px; 
+            max-width: 40%; 
+            height: 100%; 
+            background: var(--box-bg); 
+            border-right: 1px solid var(--border-color); 
+            display: flex; 
+            flex-direction: column; 
+            flex-shrink: 0; 
+        } 
+
+        #conversation-panel { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            background-color: var(--chat-bg); 
+            height: 100%; 
+            position: relative; 
+        } 
+
         .contact-item { 
             transition: background 0.2s; 
         } 
@@ -150,13 +185,13 @@
             background-color: var(--contact-active); 
         } 
 
-        /* STRUTTURA DEL MESSAGGIO E REAZIONI */ 
+        /* MESSAGGI */
         .message-wrapper { 
             display: flex; 
             flex-direction: column; 
             position: relative; 
             max-width: 75%; 
-            margin-bottom: 15px; 
+            margin-bottom: 18px; 
         } 
 
         .message-wrapper.sent { 
@@ -179,15 +214,12 @@
         } 
 
         .message.sent { 
-            background-color: #8A2BE2; 
-            color: white; 
+            background-color: var(--msg-sent-bg); 
+            color: var(--msg-sent-text); 
             border-top-right-radius: 0; 
         } 
 
-        .message.sent .sender-name { 
-            color: #f3e8ff; 
-        } 
-        .message.sent .timestamp { 
+        .message.sent .sender-name, .message.sent .timestamp { 
             color: #f3e8ff; 
         } 
 
@@ -213,7 +245,6 @@
             display: block; 
         } 
 
-        /* AUDIO PLAYER PERSONALIZZATO PER I VOCALI 🎙️ */ 
         .voice-message-player { 
             display: flex; 
             align-items: center; 
@@ -231,11 +262,7 @@
             outline: none; 
         } 
 
-        /* BARRA DELLE REAZIONI GALLEGGIANTE 👍❤️😂😮😢 */ 
-        .reaction-trigger-zone { 
-            position: relative; 
-        } 
-
+        /* BARRA REAZIONI VELOCI PER I MESSAGGI */
         .reaction-bar { 
             display: none; 
             position: absolute; 
@@ -244,17 +271,13 @@
             border: 1px solid var(--reaction-bar-border); 
             border-radius: 20px; 
             padding: 5px 10px; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
             z-index: 100; 
             gap: 10px; 
             animation: bounceIn 0.2s ease; 
         } 
 
-        .message-wrapper:hover .reaction-bar { 
-            display: flex; 
-        } 
-
-        .message-wrapper.show-reactions .reaction-bar { 
+        .message-wrapper:hover .reaction-bar, .message-wrapper.show-reactions .reaction-bar { 
             display: flex; 
         } 
 
@@ -268,7 +291,6 @@
             transform: scale(1.3); 
         } 
 
-        /* BADGE DELLE REAZIONI SOTTO LA NUVOLETTA */ 
         .reactions-container { 
             display: flex; 
             flex-wrap: wrap; 
@@ -278,13 +300,8 @@
             z-index: 5; 
         } 
 
-        .message-wrapper.sent .reactions-container { 
-            right: 10px; 
-        } 
-
-        .message-wrapper.received .reactions-container { 
-            left: 10px; 
-        } 
+        .message-wrapper.sent .reactions-container { right: 10px; } 
+        .message-wrapper.received .reactions-container { left: 10px; } 
 
         .reaction-badge { 
             background-color: var(--reaction-badge-bg); 
@@ -298,6 +315,64 @@
             cursor: pointer; 
         } 
 
+        /* PANNELLO EMOJI PER LA SCHERMATA DI SCRITTURA */
+        #emoji-picker-panel {
+            display: none;
+            position: absolute;
+            bottom: 70px;
+            left: 10px;
+            background-color: var(--box-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            z-index: 200;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        #emoji-picker-panel span {
+            font-size: 1.4rem;
+            cursor: pointer;
+            text-align: center;
+            padding: 4px;
+            border-radius: 6px;
+        }
+
+        #emoji-picker-panel span:hover {
+            background-color: var(--border-color);
+        }
+
+        /* BANNER AGGIORNAMENTO AGGIUNTIVO */
+        #update-banner { 
+            display: none; 
+            position: fixed; 
+            bottom: 20px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: #8A2BE2; 
+            color: white; 
+            padding: 12px 24px; 
+            border-radius: 30px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            z-index: 9999; 
+            align-items: center; 
+            gap: 15px; 
+            font-weight: bold; 
+        } 
+
+        #update-banner button { 
+            background: white; 
+            color: #8A2BE2; 
+            border: none; 
+            padding: 6px 12px; 
+            border-radius: 15px; 
+            cursor: pointer; 
+            font-weight: bold; 
+        } 
+
         @keyframes bounceIn { 
             0% { transform: scale(0.3); opacity: 0; } 
             50% { transform: scale(1.05); } 
@@ -305,7 +380,6 @@
             100% { transform: scale(1); opacity: 1; } 
         } 
 
-        /* PULSANTE CANCELLA MESSAGGIO */ 
         .delete-btn { 
             background: none; 
             border: none; 
@@ -316,968 +390,119 @@
             transition: opacity 0.2s; 
             padding: 0 5px; 
         } 
-        .delete-btn:hover { 
-            opacity: 1; 
-        } 
+        .delete-btn:hover { opacity: 1; } 
 
-        /* ADATTAMENTO SMARTPHONE (RESPONSIVE) */ 
         @media (max-width: 768px) { 
             #contacts-panel { max-width: 100% !important; width: 100% !important; } 
             #conversation-panel { display: none !important; } 
-             
+            
             body.in-chat #contacts-panel { display: none !important; } 
-            body.in-chat #conversation-panel { display: flex !important; width: 100% !important; height: 100dvh !important; } 
+            body.in-chat #conversation-panel { 
+                display: flex !important; 
+                width: 100% !important; 
+                height: 100dvh !important; 
+                flex-direction: column; 
+            } 
             body.in-chat #back-btn { display: block !important; } 
+
+            #input-container {
+                padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+            }
+            
+            [id^="anteprima-"] {
+                max-width: 130px !important;
+            }
         } 
     </style> 
 </head> 
 <body> 
 
+    <div id="update-banner"> 
+        <span>✨ Nuova versione disponibile per la famiglia!</span> 
+        <button id="reload-update-btn">Aggiorna 🚀</button> 
+    </div> 
+
+    <!-- SCHERMATA LOGIN PER EMAIL AUTORIZZATE -->
     <div id="login-screen"> 
         <div class="login-box"> 
-            <h2>🔑 Accedi alla Chat 🏡</h2> 
+            <h2>🔑 WhatsFamily 🏡</h2> 
+            <p style="margin-bottom: 15px; font-size: 0.85rem; color: var(--text-muted);">Accesso riservato ai componenti autorizzati della famiglia</p>
             <form id="login-form"> 
                 <input type="email" id="login-email" placeholder="📧 Email di famiglia" required> 
                 <input type="password" id="login-password" placeholder="🔒 Password" required> 
-                <button type="submit">🚀 Entra nel Gruppo!</button> 
+                <button type="submit">🚀 Entra nella Chat</button> 
             </form> 
         </div> 
     </div> 
 
-    <div id="chat-screen" style="display: none; height: 100dvh; width: 100vw; background-color: var(--chat-bg);"> 
-        <div id="main-layout" style="display: flex; width: 100%; height: 100%;"> 
+    <!-- SCHERMATA CHAT GENERALE -->
+    <div id="chat-screen" style="display: none; background-color: var(--chat-bg);"> 
+        <div id="main-layout"> 
              
-            <div id="contacts-panel" style="width: 100%; max-width: 350px; background: var(--box-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column;"> 
+            <!-- PANNELLO CONTATTI E GRUPPI -->
+            <div id="contacts-panel"> 
                 <header style="background-color: #8A2BE2; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;"> 
                     <h2 style="font-size: 1.1rem;">👥 Famiglia</h2> 
                     <div style="display: flex; gap: 5px; align-items: center;"> 
                         <button id="theme-toggle" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 5px 10px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 3px;">🌙 Scuro</button> 
-                        <button id="logout-btn" style="background: transparent; border: 1px solid white; color: white; padding: 5px 10px; border-radius: 20px; cursor: pointer; font-size: 0.8rem;">🚪 Esci</button> 
+                        <button id="logout-btn" style="background: transparent; border: 1px solid white; color: white; padding: 5px 10px; border-radius: 20px; cursor: pointer; font-size: 0.8rem;">🚪 Uscita</button> 
                     </div> 
                 </header> 
-                 
-                <div id="contacts-list" style="flex: 1; overflow-y: auto;"> 
-                </div> 
+                <div id="contacts-list" style="flex: 1; overflow-y: auto;"></div> 
             </div> 
 
-            <div id="conversation-panel" style="flex: 1; display: flex; flex-direction: column; background-color: var(--chat-bg); height: 100dvh; position: relative;"> 
+            <!-- PANNELLO CONVERSAZIONE ATTIVA -->
+            <div id="conversation-panel"> 
                 <header style="background-color: #8A2BE2; color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between; z-index: 10;"> 
                     <div style="display: flex; align-items: center; gap: 10px;"> 
                         <button id="back-btn" style="background: transparent; border: none; color: white; font-size: 1.2rem; cursor: pointer; display: none;">⬅️</button> 
                         <div> 
-                            <h1 id="active-chat-name" style="font-size: 1.2rem; color: white;">👋 Seleziona un contatto</h1> 
-                            <span id="active-chat-status" style="font-size: 0.8rem; color: #f3e8ff;">✨ per iniziare a chattare!</span> 
+                            <h1 id="active-chat-name" style="font-size: 1.2rem; color: white;">👋 Seleziona una chat</h1> 
+                            <span id="active-chat-status" style="font-size: 0.8rem; color: #f3e8ff;">✨ per iniziare!</span> 
                         </div> 
                     </div> 
+                    <!-- PULSANTE SCOPA PER PULIRE L'INTERA CHAT -->
                     <button id="clear-chat-btn" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: none; align-items: center; justify-content: center;" title="Ripulisci intera chat 🧹">🧹</button> 
                 </header> 
 
-                <div id="chat-container" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; min-height: 0;"> 
-                </div> 
+                <div id="chat-container" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; min-height: 0;"></div> 
 
-                <form id="input-container" style="background-color: var(--input-bg); padding: 12px 10px; display: flex; gap: 10px; align-items: center; position: relative; width: 100%; z-index: 10; margin-bottom: env(safe-area-inset-bottom, 0px); border-top: 1px solid var(--border-color);"> 
+                <!-- TASTIERA DI SELEZIONE EMOJI -->
+                <div id="emoji-picker-panel">
+                    <span>😀</span><span>😂</span><span>😍</span><span>🥰</span><span>😎</span><span>👍</span>
+                    <span>🙏</span><span>❤️</span><span>🎉</span><span>💩</span><span>🔥</span><span>👏</span>
+                    <span>🍕</span><span>☕</span><span>🥳</span><span>😭</span><span>🤔</span><span>😴</span>
+                </div>
+
+                <form id="input-container" style="background-color: var(--input-bg); padding: 12px 10px; display: flex; gap: 8px; align-items: center; position: relative; width: 100%; z-index: 10; margin-bottom: env(safe-area-inset-bottom, 0px); border-top: 1px solid var(--border-color);"> 
                      
-                    <label for="file-input" style="background-color: var(--border-color); color: var(--text-color); width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; transition: background 0.2s; flex-shrink: 0;" title="Carica foto o video 📸"> 
-                        📎 
-                    </label> 
-                    <input type="file" id="file-input" accept="image/*,video/*" style="display: none;"> 
+                    <!-- Tasto Emoji 😀 -->
+                    <button type="button" id="emoji-btn" style="background-color: var(--border-color); color: var(--text-color); border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Scegli Emoji 😀">😀</button>
 
-                    <button type="button" id="voice-btn" style="background-color: var(--border-color); color: var(--text-color); border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Registra Messaggio Vocale 🎙️">🎙️</button> 
+                    <!-- Selezione File Generica (Graffetta per documenti/iPhone) -->
+                    <label for="file-input" style="background-color: var(--border-color); color: var(--text-color); width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;" title="Carica file 📎">📎</label> 
+                    <input type="file" id="file-input" style="display: none;"> 
 
-                    <input type="text" id="message-input" placeholder="✏️ Scrivi un messaggio della famiglia..." autocomplete="off" disabled required style="flex: 1; padding: 12px; border: none; border-radius: 20px; outline: none; font-size: 1rem; min-width: 0; background-color: var(--msg-received-bg); color: var(--text-color);"> 
+                    <!-- Fotocamera / Video per Android / iOS -->
+                    <label for="camera-input" style="background-color: var(--border-color); color: var(--text-color); width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;" title="Scatta Foto o Video 📷">📷</label> 
+                    <input type="file" id="camera-input" accept="image/*,video/*" capture="user" style="display: none;">
+
+                    <!-- Vocale -->
+                    <button type="button" id="voice-btn" style="background-color: var(--border-color); color: var(--text-color); border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Registra Vocale 🎙️">🎙️</button> 
+
+                    <input type="text" id="message-input" placeholder="✏️ Scrivi un messaggio..." autocomplete="off" disabled required style="flex: 1; padding: 12px; border: none; border-radius: 20px; outline: none; font-size: 1rem; min-width: 0; background-color: var(--msg-received-bg); color: var(--text-color);"> 
                      
-                    <button type="submit" id="send-btn" style="background-color: #8A2BE2; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Invia messaggio 🚀">✈️</button> 
+                    <button type="submit" id="send-btn" style="background-color: #8A2BE2; color: white; border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Invia messaggio 🚀">✈️</button> 
 
                     <div id="upload-loader" style="display: none; position: absolute; top: -40px; left: 0; right: 0; background-color: #8A2BE2; color: white; text-align: center; padding: 8px; font-size: 0.9rem; font-weight: bold; box-shadow: 0 -2px 5px rgba(0,0,0,0.1);"> 
-                        🚀 Invio file multimediale in corso... Attendere! ⏳✨ 
+                        🚀 Invio in corso... Attendere! ⏳✨ 
                     </div> 
                 </form> 
             </div> 
-
         </div> 
     </div> 
 
-    <script type="module"> 
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"; 
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, limit, doc, deleteDoc, setDoc, updateDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"; 
-        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"; 
-        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js"; 
-        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js"; 
-         
-        const firebaseConfig = { 
-            apiKey: "AIzaSyCMBZjMytN2Q9M6P1iT4vMx4q7y_nVgK8w", 
-            authDomain: "whatsfamily-d8aa6.firebaseapp.com", 
-            projectId: "whatsfamily-d8aa6", 
-            storageBucket: "whatsfamily-d8aa6.firebasestorage.app", 
-            messagingSenderId: "414240543274", 
-            appId: "1:414240543274:web:c9979a6dd3433af8e9a953" 
-        }; 
-
-        const app = initializeApp(firebaseConfig); 
-        const db = getFirestore(app); 
-        const auth = getAuth(app); 
-        const storage = getStorage(app); 
-        const messaging = getMessaging(app); 
-
-        if ("Notification" in window) { 
-            Notification.requestPermission().then(permission => { 
-                console.log("Stato permessi notifiche:", permission); 
-            }); 
-        } 
-
-        if ('serviceWorker' in navigator) { 
-            window.addEventListener('load', () => { 
-                navigator.serviceWorker.register('./service-worker.js') 
-                .then(reg => { 
-                    reg.update(); 
-                }) 
-                .catch(err => console.error(err)); 
-            }); 
-        } 
-
-        const loginScreen = document.getElementById('login-screen'); 
-        const chatScreen = document.getElementById('chat-screen'); 
-        const loginForm = document.getElementById('login-form'); 
-        const logoutBtn = document.getElementById('logout-btn'); 
-        const chatContainer = document.getElementById('chat-container'); 
-        const inputForm = document.getElementById('input-container'); 
-        const messageInput = document.getElementById('message-input'); 
-        const backBtn = document.getElementById('back-btn'); 
-        const contactsList = document.getElementById('contacts-list'); 
-        const fileInput = document.getElementById('file-input'); 
-        const uploadLoader = document.getElementById('upload-loader'); 
-        const themeToggleBtn = document.getElementById('theme-toggle'); 
-        const voiceBtn = document.getElementById('voice-btn'); 
-        const clearChatBtn = document.getElementById('clear-chat-btn'); 
-
-        let utenteCorrente = null; 
-        let unsubscribeChat = null; 
-        let unsubscribeStatoAttivo = null; 
-        let idChatAttiva = null;  
-        let ascoltatoriBackground = {}; 
-        let timerScrittura = null; 
-        let dizionarioNomiGlobali = {}; 
-        let messaggiNonLettiTotali = 0; 
-
-        let mediaRecorder = null; 
-        let audioChunks = []; 
-        let isRecording = false; 
-        let recordTimerInterval = null; 
-        let recordSeconds = 0; 
-
-        function formattaNomeEmail(email) { 
-            if (!email) return "Utente"; 
-            const parteLocale = email.split('@')[0]; 
-            return parteLocale 
-                .replace(/[\.\-_]/g, ' ') 
-                .replace(/\b\w/g, c => c.toUpperCase()); 
-        } 
-
-        const temaSalvato = localStorage.getItem('theme'); 
-        if (temaSalvato === 'dark' || (!temaSalvato && window.matchMedia('(prefers-color-scheme: dark)').matches)) { 
-            document.body.classList.add('dark-mode'); 
-            themeToggleBtn.innerText = '☀️ Chiaro'; 
-        } else { 
-            themeToggleBtn.innerText = '🌙 Scuro'; 
-        } 
-
-        themeToggleBtn.addEventListener('click', () => { 
-            document.body.classList.toggle('dark-mode'); 
-            if (document.body.classList.contains('dark-mode')) { 
-                localStorage.setItem('theme', 'dark'); 
-                themeToggleBtn.innerText = '☀️ Chiaro'; 
-            } else { 
-                localStorage.setItem('theme', 'light'); 
-                themeToggleBtn.innerText = '🌙 Scuro'; 
-            } 
-        }); 
-
-        function riproduciBipNotifica() { 
-            try { 
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
-                const oscillator = audioCtx.createOscillator(); 
-                const gainNode = audioCtx.createGain(); 
-                 
-                oscillator.type = 'sine';  
-                oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); 
-                gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime); 
-                 
-                oscillator.connect(gainNode); 
-                gainNode.connect(audioCtx.destination); 
-                 
-                oscillator.start(); 
-                oscillator.stop(audioCtx.currentTime + 0.15); 
-            } catch(e) { 
-                console.log("Audio bloccato dal browser:", e); 
-            } 
-        } 
-
-        async function richiediESalvaTokenNotifiche(userId) { 
-            try { 
-                if (!("Notification" in window)) return; 
-                 
-                const permission = await Notification.requestPermission(); 
-                if (permission === "granted") { 
-                    const registration = await navigator.serviceWorker.ready; 
-                     
-                    const tokenCorrente = await getToken(messaging, {  
-                        serviceWorkerRegistration: registration, 
-                        vapidKey: "BHHKBMPf-i-ODMIFw4qYXDHEc0eNyT1GsxDnsjnYUO1z-WR1ffo9W_Eyvt_Id2oi0xwB9W3RdUxKpZcYgVYEx4A"  
-                    }); 
-
-                    if (tokenCorrente) { 
-                        console.log("Token notifica ottenuto con successo!"); 
-                        const userRef = doc(db, "users", userId); 
-                        await updateDoc(userRef, { 
-                            fcmToken: tokenCorrente 
-                        }); 
-                    } 
-                } 
-            } catch (err) { 
-                console.error("Errore durante il recupero del token di notifica:", err); 
-            } 
-        } 
-
-        async function impostaStatoUtente(stato) { 
-            if (!utenteCorrente) return; 
-            try { 
-                const userRef = doc(db, "users", utenteCorrente.uid); 
-                await updateDoc(userRef, { 
-                    stato: stato 
-                }); 
-            } catch (error) { 
-                console.error("Errore nell'impostare lo stato:", error); 
-            } 
-        } 
-
-        async function impostaStatoScrittura(idDestinazione) { 
-            if (!utenteCorrente) return; 
-            try { 
-                const userRef = doc(db, "users", utenteCorrente.uid); 
-                await updateDoc(userRef, { 
-                    typingTo: idDestinazione 
-                }); 
-            } catch (error) { 
-                console.error("Errore nell'impostare lo stato di scrittura:", error); 
-            } 
-        } 
-
-        document.addEventListener('visibilitychange', () => { 
-            if (document.visibilityState === 'visible') { 
-                impostaStatoUtente("🟢 Online"); 
-                if ('clearAppBadge' in navigator) { 
-                    navigator.clearAppBadge().catch(e => console.log(e)); 
-                } 
-                messaggiNonLettiTotali = 0; 
-            } else { 
-                impostaStatoUtente("💤 Offline"); 
-                impostaStatoScrittura(null); 
-            } 
-        }); 
-
-        onAuthStateChanged(auth, async (user) => { 
-            if (user) { 
-                utenteCorrente = user; 
-                 
-                const nomeDefinito = user.displayName || formattaNomeEmail(user.email); 
-                const userRef = doc(db, "users", user.uid); 
-                await setDoc(userRef, { 
-                    uid: user.uid, 
-                    nome: nomeDefinito, 
-                    email: user.email, 
-                    stato: "🟢 Online", 
-                    typingTo: null 
-                }, { merge: true }); 
-
-                richiediESalvaTokenNotifiche(user.uid); 
-
-                loginScreen.style.display = 'none'; 
-                chatScreen.style.display = 'flex'; 
-                 
-                const snapNomiIniziale = query(collection(db, "users")); 
-                onSnapshot(snapNomiIniziale, (s) => { 
-                    s.forEach(doc => { 
-                        const u = doc.data(); 
-                        dizionarioNomiGlobali[u.uid] = u.nome || formattaNomeEmail(u.email); 
-                    }); 
-                }); 
-
-                caricaContatti(); 
-            } else { 
-                if (utenteCorrente) { 
-                    await impostaStatoUtente("💤 Offline"); 
-                    await impostaStatoScrittura(null); 
-                } 
-                utenteCorrente = null; 
-                chatScreen.style.display = 'none'; 
-                loginScreen.style.display = 'flex'; 
-                 
-                if (unsubscribeChat) { unsubscribeChat(); unsubscribeChat = null; } 
-                if (unsubscribeStatoAttivo) { unsubscribeStatoAttivo(); unsubscribeStatoAttivo = null; } 
-                Object.keys(ascoltatoriBackground).forEach(key => { 
-                    ascoltatoriBackground[key](); 
-                }); 
-                ascoltatoriBackground = {}; 
-                idChatAttiva = null; 
-                clearChatBtn.style.display = 'none'; 
-            } 
-        }); 
-
-        messageInput.addEventListener('input', () => { 
-            if (!utenteCorrente || !idChatAttiva) return; 
-
-            impostaStatoScrittura(idChatAttiva); 
-            clearTimeout(timerScrittura); 
-
-            timerScrittura = setTimeout(() => { 
-                impostaStatoScrittura(null); 
-            }, 2500); 
-        }); 
-
-        function caricaContatti() { 
-            const qUtenti = query(collection(db, "users")); 
-            const qGruppi = query(collection(db, "groups")); 
-
-            let utentiSalvati = []; 
-            let gruppiSalvati = []; 
-
-            function aggiornaListaLaterale() { 
-                contactsList.innerHTML = ''; 
-
-                gruppiSalvati.forEach((gruppo) => { 
-                    if (!gruppo.members || !gruppo.members.includes(utenteCorrente.uid)) return; 
-
-                    const idChatGruppo = `gruppo_${gruppo.id}`; 
-                    const voceGruppo = document.createElement('div'); 
-                    voceGruppo.classList.add('contact-item'); 
-                    voceGruppo.id = `contatto-${idChatGruppo}`; 
-                    voceGruppo.style = "padding: 15px; border-bottom: 1px solid var(--border-color); cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s;"; 
-
-                    voceGruppo.innerHTML = ` 
-                        <div style="display: flex; align-items: center; gap: 10px;"> 
-                            <div style="width: 40px; height: 40px; background: #8A2BE2; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: white;">👥</div> 
-                            <div> 
-                                <div style="font-weight: bold; color: var(--contact-name-color);">${gruppo.name}</div> 
-                                <div id="anteprima-${idChatGruppo}" style="font-size: 0.8rem; color: var(--text-muted); max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📭 Nessun messaggio</div> 
-                            </div> 
-                        </div> 
-                        <div id="notifica-${idChatGruppo}" style="display: none; background-color: #8A2BE2; color: white; font-size: 0.75rem; font-weight: bold; min-width: 20px; height: 20px; border-radius: 50%; align-items: center; justify-content: center; padding: 2px;">⚡</div> 
-                    `; 
-
-                    voceGruppo.addEventListener('click', () => { 
-                        document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active')); 
-                        voceGruppo.classList.add('active'); 
-                        idChatAttiva = idChatGruppo; 
-
-                        const pallino = document.getElementById(`notifica-${idChatGruppo}`); 
-                        if (pallino) pallino.style.display = 'none'; 
-
-                        apriStanzaChat(gruppo.name, true, null); 
-                    }); 
-
-                    contactsList.appendChild(voceGruppo); 
-                    attivaAscoltoBackground(idChatGruppo, true); 
-                }); 
-
-                if (gruppiSalvati.length > 0 && utentiSalvati.length > 0) { 
-                    const divisa = document.createElement('div'); 
-                    divisa.style = "padding: 5px 15px; background: var(--bg-color); font-size: 0.75rem; font-weight: bold; color: var(--text-muted); text-transform: uppercase;"; 
-                    divisa.innerText = "💬 Chat Private 🔐"; 
-                    contactsList.appendChild(divisa); 
-                } 
-
-                const uidsRendering = new Set(); 
-
-                utentiSalvati.forEach((parente) => { 
-                    if (parente.uid === utenteCorrente.uid) return; 
-                    if (uidsRendering.has(parente.uid)) return; 
-                    uidsRendering.add(parente.uid); 
-
-                    const ids = [utenteCorrente.uid, parente.uid].sort(); 
-                    const idChatParente = `${ids[0]}_${ids[1]}`; 
-
-                    const voceContatto = document.createElement('div'); 
-                    voceContatto.classList.add('contact-item'); 
-                    voceContatto.id = `contatto-${idChatParente}`; 
-                    voceContatto.style = "padding: 15px; border-bottom: 1px solid var(--border-color); cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s;"; 
-                     
-                    const nomeContattoPulito = parente.nome || formattaNomeEmail(parente.email); 
-                    const iniziale = nomeContattoPulito.charAt(0).toUpperCase(); 
-                    const statoCorrente = parente.stato || "💤 Offline"; 
-
-                    voceContatto.innerHTML = ` 
-                        <div style="display: flex; align-items: center; gap: 10px;"> 
-                            <div style="width: 40px; height: 40px; background: #8A2BE2; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">${iniziale}</div> 
-                            <div> 
-                                <div style="font-weight: bold; color: var(--contact-name-color);">${nomeContattoPulito} ✨</div> 
-                                <div id="anteprima-${idChatParente}" style="font-size: 0.8rem; color: var(--text-muted); max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📭 Nessun messaggio</div> 
-                            </div> 
-                        </div> 
-                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;"> 
-                            <span id="lista-stato-${parente.uid}" style="font-size: 0.75rem; font-weight: bold; color: var(--text-muted);">${statoCorrente}</span> 
-                            <div id="notifica-${idChatParente}" style="display: none; background-color: #8A2BE2; color: white; font-size: 0.75rem; font-weight: bold; min-width: 20px; height: 20px; border-radius: 50%; align-items: center; justify-content: center; padding: 2px;">⚡</div> 
-                        </div> 
-                    `; 
-
-                    voceContatto.addEventListener('click', () => { 
-                        document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active')); 
-                        voceContatto.classList.add('active'); 
-                        idChatAttiva = idChatParente; 
-
-                        const pallino = document.getElementById(`notifica-${idChatParente}`); 
-                        if (pallino) pallino.style.display = 'none'; 
-
-                        apriStanzaChat(nomeContattoPulito, false, parente.uid); 
-                    }); 
-
-                    contactsList.appendChild(voceContatto); 
-                    attivaAscoltoBackground(idChatParente, false); 
-                }); 
-            } 
-
-            onSnapshot(qUtenti, (snapshot) => { 
-                utentiSalvati = []; 
-                const cacheUids = new Set(); 
-                snapshot.forEach(doc => { 
-                    const u = doc.data(); 
-                    if (!cacheUids.has(u.uid)) { 
-                        cacheUids.add(u.uid); 
-                        utentiSalvati.push(u); 
-                    } 
-                }); 
-                aggiornaListaLaterale(); 
-            }); 
-
-            onSnapshot(qGruppi, (snapshot) => { 
-                gruppiSalvati = []; 
-                snapshot.forEach(doc => { 
-                    gruppiSalvati.push({ id: doc.id, ...doc.data() }); 
-                }); 
-                aggiornaListaLaterale(); 
-            }); 
-        } 
-
-        function attivaAscoltoBackground(idChat, isGroup) { 
-            if (ascoltatoriBackground[idChat]) return; 
-
-            const percorsoBase = isGroup  
-                ? collection(db, "groups", idChat.replace("gruppo_", ""), "messages") 
-                : collection(db, "chats", idChat, "messages"); 
-
-            const qNotifiche = query( 
-                percorsoBase, 
-                orderBy("timestamp", "desc"), 
-                limit(1) 
-            ); 
-
-            let bloccoIniziale = true; 
-
-            ascoltatoriBackground[idChat] = onSnapshot(qNotifiche, (snapMessaggi) => { 
-                if (!snapMessaggi.empty) { 
-                    const ultimoDoc = snapMessaggi.docs[0].data(); 
-                    const anteprimaTesto = document.getElementById(`anteprima-${idChat}`); 
-                    const pallinoNotifica = document.getElementById(`notifica-${idChat}`); 
-
-                    let testoNotifica = ultimoDoc.text || "Messaggio"; 
-                    if (ultimoDoc.fileType === 'image') testoNotifica = "📷 Foto"; 
-                    else if (ultimoDoc.fileType === 'video') testoNotifica = "🎥 Video"; 
-                    else if (ultimoDoc.fileType === 'audio') testoNotifica = "🎙️ Vocale"; 
-
-                    if (anteprimaTesto) { 
-                        anteprimaTesto.innerText = testoNotifica; 
-                    } 
-
-                    if (ultimoDoc.senderId !== utenteCorrente.uid && !bloccoIniziale) { 
-                        if (!isGroup && ultimoDoc.consegnato === false) { 
-                            const ultimoDocId = snapMessaggi.docs[0].id; 
-                            const docRef = doc(db, "chats", idChat, "messages", ultimoDocId); 
-                            updateDoc(docRef, { consegnato: true }).catch(e => console.error(e)); 
-                        } 
-
-                        if (idChatAttiva !== idChat) { 
-                            if (pallinoNotifica && (pallinoNotifica.style.display === 'none' || pallinoNotifica.style.display === '')) { 
-                                pallinoNotifica.style.display = 'flex'; 
-                            } 
-                            messaggiNonLettiTotali++; 
-                            if ('setAppBadge' in navigator) { 
-                                navigator.setAppBadge(messaggiNonLettiTotali).catch(e => console.log(e)); 
-                            } 
-                            interfacciaNotificaPush("💬 WhatsFamily 🏡", testoNotifica); 
-                        } else { 
-                            riproduciBipNotifica(); 
-                        } 
-                    } 
-                } 
-                bloccoIniziale = false; 
-            }); 
-        } 
-
-        function interfacciaNotificaPush(titolo, testo) { 
-            if (document.visibilityState === "visible") { 
-                riproduciBipNotifica(); 
-                return; 
-            } 
-            if ("Notification" in window && Notification.permission === "granted") { 
-                navigator.serviceWorker.ready.then(registration => { 
-                    registration.showNotification(titolo, { 
-                        body: testo, 
-                        icon: "./icon001.png", 
-                        badge: "./icon001.png", 
-                        vibrate: [300, 100, 300], 
-                        tag: "whatsfamily-alert", 
-                        renotify: true, 
-                        requireInteraction: true 
-                    }); 
-                }); 
-            } else { 
-                riproduciBipNotifica(); 
-            } 
-        } 
-
-        async function aggiungiReazione(msgId, emoji, isGroup) { 
-            if (!utenteCorrente || !idChatAttiva) return; 
-
-            const docRef = isGroup 
-                ? doc(db, "groups", idChatAttiva.replace("gruppo_", ""), "messages", msgId) 
-                : doc(db, "chats", idChatAttiva, "messages", msgId); 
-
-            try { 
-                const snap = await getDoc(docRef); 
-                if (snap.exists()) { 
-                    const datiMsg = snap.data(); 
-                    let reazioniAttuali = datiMsg.reactions || {}; 
-
-                    if (reazioniAttuali[utenteCorrente.uid] === emoji) { 
-                        delete reazioniAttuali[utenteCorrente.uid]; 
-                    } else { 
-                        reazioniAttuali[utenteCorrente.uid] = emoji; 
-                    } 
-
-                    await updateDoc(docRef, { 
-                        reactions: reazioniAttuali 
-                    }); 
-                } 
-            } catch (err) { 
-                console.error("Errore nel salvataggio della reazione:", err); 
-            } 
-        } 
-
-        function apriStanzaChat(nomeParente, isGroup = false, idParente = null) { 
-            document.body.classList.add('in-chat'); 
-            document.getElementById('active-chat-name').innerText = (isGroup ? "👥 " : "👤 ") + nomeParente; 
-            clearChatBtn.style.display = 'flex'; 
-             
-            if (unsubscribeStatoAttivo) { unsubscribeStatoAttivo(); unsubscribeStatoAttivo = null; } 
-
-            if (isGroup) { 
-                document.getElementById('active-chat-status').innerText = "🏡 Gruppo di Famiglia"; 
-            } else if (idParente) { 
-                unsubscribeStatoAttivo = onSnapshot(doc(db, "users", idParente), (docSnap) => { 
-                    if (docSnap.exists()) { 
-                        const datiParente = docSnap.data(); 
-                        if (datiParente.typingTo === idChatAttiva) { 
-                            document.getElementById('active-chat-status').innerHTML = "<span style='color: #adff2f; font-weight: bold;'>✍️ Sta scrivendo...</span>"; 
-                        } else { 
-                            document.getElementById('active-chat-status').innerText = datiParente.stato || "💤 Offline"; 
-                        } 
-                    } else { 
-                        document.getElementById('active-chat-status').innerText = "💤 Offline"; 
-                    } 
-                }); 
-            } 
-
-            messageInput.disabled = false; 
-            messageInput.placeholder = "✏️ Scrivi un messaggio..."; 
-
-            if (unsubscribeChat) { unsubscribeChat(); } 
-
-            const percorsoMessaggi = isGroup 
-                ? query(collection(db, "groups", idChatAttiva.replace("gruppo_", ""), "messages"), orderBy("timestamp", "asc")) 
-                : query(collection(db, "chats", idChatAttiva, "messages"), orderBy("timestamp", "asc")); 
-
-            unsubscribeChat = onSnapshot(percorsoMessaggi, (snapshot) => { 
-                chatContainer.innerHTML = ''; 
-                 
-                snapshot.forEach((docMsg) => { 
-                    const dati = docMsg.data(); 
-                    const msgId = docMsg.id;  
-                    const mioMessaggio = (dati.senderId === utenteCorrente.uid); 
-                    const tipoMessaggio = mioMessaggio ? "sent" : "received"; 
-                     
-                    if (!mioMessaggio && !isGroup && dati.letto === false) { 
-                        const docRef = doc(db, "chats", idChatAttiva, "messages", msgId); 
-                        updateDoc(docRef, { letto: true, consegnato: true }).catch(e => console.error(e)); 
-                    } 
-
-                    let oraFormattata = "--:--"; 
-                    if (dati.timestamp) { 
-                        oraFormattata = dati.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); 
-                    } 
-
-                    let nomeMittente = mioMessaggio ? '😎 Tu' : (dizionarioNomiGlobali[dati.senderId] || nomeParente); 
-
-                    const contenitoreMessaggioEsterno = document.createElement('div'); 
-                    contenitoreMessaggioEsterno.classList.add('message-wrapper', tipoMessaggio); 
-
-                    let contenutoMessaggio = ''; 
-
-                    if (dati.fileType === 'image') { 
-                        contenutoMessaggio = ` 
-                            <a href="${dati.fileUrl}" target="_blank"> 
-                                <img src="${dati.fileUrl}" style="max-width: 100%; max-height: 250px; border-radius: 8px; margin-top: 5px; display: block; cursor: pointer;" alt="Foto inviata"> 
-                            </a> 
-                        `; 
-                    } else if (dati.fileType === 'video') { 
-                        contenutoMessaggio = ` 
-                            <video src="${dati.fileUrl}" controls style="max-width: 100%; max-height: 250px; border-radius: 8px; margin-top: 5px; display: block;"></video> 
-                        `; 
-                    } else if (dati.fileType === 'audio') { 
-                        contenutoMessaggio = ` 
-                            <div class="voice-message-player"> 
-                                <span>🎙️ Vocale</span> 
-                                <audio src="${dati.fileUrl}" controls controlsList="nodownload" style="height: 35px;"></audio> 
-                            </div> 
-                        `; 
-                    } else { 
-                        contenutoMessaggio = `<p style="margin: 0; word-break: break-word;">${dati.text}</p>`; 
-                    } 
-
-                    const emojiScelte = ["👍", "❤️", "😂", "😮", "😢"]; 
-                    let reactionBarHtml = `<div class="reaction-bar">`; 
-                    emojiScelte.forEach(emo => { 
-                        reactionBarHtml += `<span class="reaction-emoji" data-emoji="${emo}">${emo}</span>`; 
-                    }); 
-                    reactionBarHtml += `</div>`; 
-
-                    let badgeReazioniHtml = `<div class="reactions-container">`; 
-                    const reazioniSalvate = dati.reactions || {}; 
-                    const conteggioEmoji = {}; 
-
-                    Object.keys(reazioniSalvate).forEach(uid => { 
-                        const emo = reazioniSalvate[uid]; 
-                        conteggioEmoji[emo] = (conteggioEmoji[emo] || 0) + 1; 
-                    }); 
-
-                    Object.keys(conteggioEmoji).forEach(emo => { 
-                        let listaNomiChiHaReagito = Object.keys(reazioniSalvate) 
-                            .filter(uid => reazioniSalvate[uid] === emo) 
-                            .map(uid => (uid === utenteCorrente.uid ? "Tu" : (dizionarioNomiGlobali[uid] || "Qualcuno"))) 
-                            .join(", "); 
-
-                        badgeReazioniHtml += ` 
-                            <div class="reaction-badge" title="Reazione di: ${listaNomiChiHaReagito}" data-emoji="${emo}"> 
-                                ${emo} <span>${conteggioEmoji[emo]}</span> 
-                            </div> 
-                        `; 
-                    }); 
-                    badgeReazioniHtml += `</div>`; 
-
-                    let spunteHtml = ''; 
-                    if (mioMessaggio && !isGroup) { 
-                        if (dati.letto) { 
-                            spunteHtml = `<span style="color: #24a0ed; margin-left: 5px; font-weight: bold; font-size: 0.85rem;" title="Letto">✓✓</span>`; 
-                        } else if (dati.consegnato) { 
-                            spunteHtml = `<span style="color: var(--text-muted); margin-left: 5px; font-size: 0.85rem;" title="Consegnato">✓✓</span>`; 
-                        } else { 
-                            spunteHtml = `<span style="color: var(--text-muted); margin-left: 5px; font-size: 0.85rem;" title="Inviato">✓</span>`; 
-                        } 
-                    } 
-
-                    contenitoreMessaggioEsterno.innerHTML = ` 
-                        ${reactionBarHtml} 
-                        <div class="message ${tipoMessaggio}"> 
-                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;"> 
-                                <span class="sender-name">${nomeMittente}</span> 
-                                <button class="delete-btn" title="Elimina messaggio 🗑️">🗑️</button> 
-                            </div> 
-                            ${contenutoMessaggio} 
-                            <span class="timestamp">🕒 ${oraFormattata} ${spunteHtml}</span> 
-                        </div> 
-                        ${badgeReazioniHtml} 
-                    `; 
-
-                    contenitoreMessaggioEsterno.addEventListener('click', (e) => { 
-                        if (e.target.classList.contains('reaction-emoji') || e.target.classList.contains('delete-btn') || e.target.tagName === 'AUDIO') return; 
-                         
-                        document.querySelectorAll('.message-wrapper').forEach(el => { 
-                            if (el !== contenitoreMessaggioEsterno) el.classList.remove('show-reactions'); 
-                        }); 
-                        contenitoreMessaggioEsterno.classList.toggle('show-reactions'); 
-                    }); 
-
-                    const botbotonesEmoji = contenitoreMessaggioEsterno.querySelectorAll('.reaction-emoji'); 
-                    botbotonesEmoji.forEach(btn => { 
-                        btn.addEventListener('click', (e) => { 
-                            e.stopPropagation(); 
-                            const emo = btn.getAttribute('data-emoji'); 
-                            aggiungiReazione(msgId, emo, isGroup); 
-                            contenitoreMessaggioEsterno.classList.remove('show-reactions'); 
-                        }); 
-                    }); 
-
-                    const badgeReazioni = contenitoreMessaggioEsterno.querySelectorAll('.reaction-badge'); 
-                    badgeReazioni.forEach(badge => { 
-                        badge.addEventListener('click', (e) => { 
-                            e.stopPropagation(); 
-                            const emo = badge.getAttribute('data-emoji'); 
-                            aggiungiReazione(msgId, emo, isGroup); 
-                        }); 
-                    }); 
-
-                    const btnElimina = contenitoreMessaggioEsterno.querySelector('.delete-btn'); 
-                    btnElimina.addEventListener('click', async (e) => { 
-                        e.stopPropagation(); 
-                        if (confirm("🚨 Vuoi davvero eliminare questo messaggio per tutti? Non si può tornare indietro!")) { 
-                            try { 
-                                const docRef = isGroup  
-                                    ? doc(db, "groups", idChatAttiva.replace("gruppo_", ""), "messages", msgId) 
-                                    : doc(db, "chats", idChatAttiva, "messages", msgId); 
-
-                                if (dati.fileUrl) { 
-                                    try { 
-                                        const storageRef = ref(storage, dati.fileUrl); 
-                                        await deleteObject(storageRef); 
-                                    } catch (errStorage) { 
-                                        console.warn("File storage rimosso o inesistente:", errStorage); 
-                                    } 
-                                } 
-
-                                await deleteDoc(docRef); 
-                            } catch (error) { 
-                                alert("❌ Errore durante l'eliminazione: " + error.message); 
-                            } 
-                        } 
-                    }); 
-
-                    chatContainer.appendChild(contenitoreMessaggioEsterno); 
-                }); 
-                chatContainer.scrollTop = chatContainer.scrollHeight; 
-            }); 
-        } 
-
-        voiceBtn.addEventListener('click', async () => { 
-            if (!utenteCorrente || !idChatAttiva) return; 
-
-            if (!isRecording) { 
-                try { 
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
-                    audioChunks = []; 
-                     
-                    mediaRecorder = new MediaRecorder(stream); 
-                    mediaRecorder.addEventListener("dataavailable", event => { 
-                        audioChunks.push(event.data); 
-                    }); 
-
-                    mediaRecorder.addEventListener("stop", async () => { 
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); 
-                        uploadLoader.style.display = 'block'; 
-
-                        const nomeFileUnico = `${Date.now()}_vocale.webm`; 
-                        const percorsoStorage = ref(storage, `chat_files/${idChatAttiva}/${nomeFileUnico}`); 
-
-                        const isGroup = idChatAttiva.startsWith("gruppo_"); 
-                        const percorsoInvia = isGroup 
-                            ? collection(db, "groups", idChatAttiva.replace("gruppo_", ""), "messages") 
-                            : collection(db, "chats", idChatAttiva, "messages"); 
-
-                        try { 
-                            const snapshot = await uploadBytes(percorsoStorage, audioBlob); 
-                            const urlScaricabile = await getDownloadURL(snapshot.ref); 
-
-                            await addDoc(percorsoInvia, { 
-                                text: "🎙️ Messaggio Vocale", 
-                                fileUrl: urlScaricabile, 
-                                fileType: "audio", 
-                                senderId: utenteCorrente.uid, 
-                                timestamp: serverTimestamp(), 
-                                consegnato: false, 
-                                letto: false 
-                            }); 
-                        } catch (errUpload) { 
-                            console.error("Errore nel caricamento del vocale:", errUpload); 
-                            alert("❌ Impossibile inviare il vocale!"); 
-                        } finally { 
-                            uploadLoader.style.display = 'none'; 
-                            stream.getTracks().forEach(track => track.stop()); 
-                        } 
-                    }); 
-
-                    mediaRecorder.start(); 
-                    isRecording = true; 
-                    voiceBtn.innerText = "⏹️"; 
-                    voiceBtn.style.backgroundColor = "#ff4d4d";  
-                    voiceBtn.style.color = "#ffffff"; 
-                     
-                    recordSeconds = 0; 
-                    messageInput.placeholder = "🔴 REGISTRAZIONE AUDIO IN CORSO: 00:00"; 
-                    messageInput.disabled = true; 
-
-                    recordTimerInterval = setInterval(() => { 
-                        recordSeconds++; 
-                        const minuti = String(Math.floor(recordSeconds / 60)).padStart(2, '0'); 
-                        const secondi = String(recordSeconds % 60).padStart(2, '0'); 
-                        messageInput.placeholder = `🔴 REGISTRAZIONE AUDIO IN CORSO: ${minuti}:${secondi}`; 
-                    }, 1000); 
-
-                } catch (errMicrophone) { 
-                    console.error("Accesso al microfono negato:", errMicrophone); 
-                    alert("❌ Per inviare vocali devi dare il permesso di usare il microfono!"); 
-                } 
-
-            } else { 
-                if (mediaRecorder && mediaRecorder.state !== "inactive") { 
-                    mediaRecorder.stop(); 
-                } 
-                 
-                clearInterval(recordTimerInterval); 
-                isRecording = false; 
-                 
-                voiceBtn.innerText = "🎙️"; 
-                voiceBtn.style.backgroundColor = "var(--border-color)"; 
-                voiceBtn.style.color = "var(--text-color)"; 
-                messageInput.placeholder = "✏️ Scrivi un messaggio della famiglia..."; 
-                messageInput.disabled = false; 
-            } 
-        }); 
-
-        clearChatBtn.addEventListener('click', async () => { 
-            if (!utenteCorrente || !idChatAttiva) return; 
-
-            if (confirm("🧹 ATTENZIONE! Vuoi ripulire COMPLETAMENTE questa chat? Tutti i messaggi e file andranno persi per TUTTI!")) { 
-                const isGroup = idChatAttiva.startsWith("gruppo_"); 
-                const percorsoChat = isGroup 
-                    ? collection(db, "groups", idChatAttiva.replace("gruppo_", ""), "messages") 
-                    : collection(db, "chats", idChatAttiva, "messages"); 
-
-                try { 
-                    uploadLoader.style.display = 'block'; 
-                    const snapshot = await getDocs(percorsoChat); 
-                     
-                    const batchPromesse = snapshot.docs.map(async (documento) => { 
-                        const dati = documento.data(); 
-                         
-                        if (dati.fileUrl) { 
-                            try { 
-                                const storageRef = ref(storage, dati.fileUrl); 
-                                await deleteObject(storageRef); 
-                            } catch (e) { 
-                                console.warn("File non presente nello storage o rimosso:", e); 
-                            } 
-                        } 
-                        return deleteDoc(doc(percorsoChat, documento.id)); 
-                    }); 
-
-                    await Promise.all(batchPromesse); 
-                    alert("🧹 Chat ripulita con successo!"); 
-                } catch (err) { 
-                    alert("❌ Errore durante lo svuotamento: " + err.message); 
-                } finally { 
-                    uploadLoader.style.display = 'none'; 
-                } 
-            } 
-        }); 
-
-        inputForm.addEventListener('submit', async (e) => { 
-            e.preventDefault(); 
-            const testo = messageInput.value.trim(); 
-            if (testo === '' || !utenteCorrente || !idChatAttiva || isRecording) return; 
-
-            const isGroup = idChatAttiva.startsWith("gruppo_"); 
-            const percorsoInvia = isGroup 
-                ? collection(db, "groups", idChatAttiva.replace("gruppo_", ""), "messages") 
-                : collection(db, "chats", idChatAttiva, "messages"); 
-
-            try { 
-                clearTimeout(timerScrittura); 
-                await impostaStatoScrittura(null); 
-
-                await addDoc(percorsoInvia, { 
-                    text: testo, 
-                    senderId: utenteCorrente.uid, 
-                    timestamp: serverTimestamp(), 
-                    consegnato: false, 
-                    letto: false 
-                }); 
-                messageInput.value = ''; 
-            } catch (error) { 
-                alert("❌ Errore d'invio: " + error.message); 
-            } 
-        }); 
-
-        fileInput.addEventListener('change', async (e) => { 
-            const file = e.target.files[0]; 
-            if (!file || !utenteCorrente || !idChatAttiva || isRecording) return; 
-
-            uploadLoader.style.display = 'block'; 
-
-            const isImage = file.type.startsWith('image/'); 
-            const isVideo = file.type.startsWith('video/'); 
-            const tipoFile = isImage ? 'image' : (isVideo ? 'video' : 'file'); 
-
-            const nomeFileUnico = `${Date.now()}_${file.name}`; 
-            const percorsoStorage = ref(storage, `chat_files/${idChatAttiva}/${nomeFileUnico}`); 
-
-            const isGroup = idChatAttiva.startsWith("gruppo_"); 
-            const percorsoInvia = isGroup 
-                ? collection(db, "groups", idChatAttiva.replace("gruppo_", ""), "messages") 
-                : collection(db, "chats", idChatAttiva, "messages"); 
-
-            try { 
-                const snapshot = await uploadBytes(percorsoStorage, file); 
-                const urlScaricabile = await getDownloadURL(snapshot.ref); 
-
-                await addDoc(percorsoInvia, { 
-                    text: isImage ? "📷 Foto" : "🎥 Video", 
-                    fileUrl: urlScaricabile, 
-                    fileType: tipoFile, 
-                    senderId: utenteCorrente.uid, 
-                    timestamp: serverTimestamp(), 
-                    consegnato: false, 
-                    letto: false 
-                }); 
-
-                fileInput.value = ''; 
-
-            } catch (error) { 
-                console.error("Errore durante il caricamento del file:", error); 
-                alert("❌ Impossibile caricare il file. Riprova!"); 
-            } finally { 
-                uploadLoader.style.display = 'none'; 
-            } 
-        }); 
-
-        loginForm.addEventListener('submit', async (e) => { 
-            e.preventDefault(); 
-            const email = document.getElementById('login-email').value.trim(); 
-            const password = document.getElementById('login-password').value; 
-            try { 
-                await signInWithEmailAndPassword(auth, email, password); 
-                loginForm.reset(); 
-            } catch (error) { 
-                alert("❌ Accesso negato! Controlla e-mail e password."); 
-            } 
-        }); 
-
-        logoutBtn.addEventListener('click', async () => { 
-            if (confirm("🚪 Vuoi uscire dalla chat di famiglia?")) { 
-                await impostaStatoUtente("💤 Offline"); 
-                await impostaStatoScrittura(null); 
-                await signOut(auth); 
-            } 
-        }); 
-
-        backBtn.addEventListener('click', async () => { 
-            document.body.classList.remove('in-chat'); 
-            idChatAttiva = null;  
-            clearChatBtn.style.display = 'none'; 
-            if (unsubscribeStatoAttivo) { unsubscribeStatoAttivo(); unsubscribeStatoAttivo = null; } 
-            await impostaStatoScrittura(null);  
-        }); 
-
-        window.addEventListener('beforeunload', async () => { 
-            await impostaStatoUtente("💤 Offline"); 
-            await impostaStatoScrittura(null); 
-        }); 
-    </script> 
+    <!-- Script Principale JS -->
+    <script type="module" src="./app.js"></script> 
 </body> 
 </html>
