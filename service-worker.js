@@ -19,7 +19,7 @@ const db = firebase.firestore();
 const messaging = firebase.messaging();
 
 // Cache statici
-const CACHE_NAME = 'whatsfamily-v2.7';
+const CACHE_NAME = 'whatsfamily-v2.8';
 const urlsToCache = [
   '/',
   '/index.html',
