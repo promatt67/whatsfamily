@@ -10,30 +10,36 @@ firebase.initializeApp({
   apiKey: "AIzaSyCMBZjMytN2Q9M6P1iT4vMx4q7y_nVgK8w",
   authDomain: "whatsfamily-d8aa6.firebaseapp.com",
   projectId: "whatsfamily-d8aa6",
-  storageBucket: "whatsfamily-d8aa6.appspot.com",
-  messagingSenderId: "367399335606",
-  appId: "1:367399335606:web:658c14d9b4dbcb18ceb52c"
+  storageBucket: "whatsfamily-d8aa6.firebasestorage.app",
+  messagingSenderId: "414240543274",
+  appId: "1:414240543274:web:c9979a6dd3433af8e9a953"
 });
 
 const db = firebase.firestore();
 const messaging = firebase.messaging();
 
 // Cache statici
-const CACHE_NAME = 'whatsfamily-v2.8';
+const CACHE_NAME = 'whatsfamily-v2.9';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './icon001.png'
 ];
 
 // Installazione Service Worker e Caching
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then(cache => {
+      return Promise.all(
+        urlsToCache.map(url =>
+          cache.add(url).catch(err => {
+            console.warn(`[service-worker.js] Impossibile mettere in cache ${url}:`, err);
+          })
+        )
+      );
+    })
   );
 });
 
@@ -78,8 +84,8 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification?.title || data.title || 'Nuovo Messaggio';
   const notificationOptions = {
     body: payload.notification?.body || data.body || 'Hai ricevuto un messaggio',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    icon: './icon001.png',
+    badge: './icon001.png',
     tag: chatId || 'whatsfamily-notification',
     data: data
   };
