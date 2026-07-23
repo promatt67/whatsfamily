@@ -1,79 +1,50 @@
 // ==========================================
-// 1. IMPORTAZIONE SDK FIREBASE MESSAGING (Compat)
+// 1. IMPORTAZIONE SDK FIREBASE (Compat)
 // ==========================================
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js');
 
-// Inizializzazione Firebase nel Service Worker per Notifiche Background
+// Inizializzazione Firebase nel Service Worker per Notifiche e Firestore Background
 firebase.initializeApp({
   apiKey: "AIzaSyCMBZjMytN2Q9M6P1iT4vMx4q7y_nVgK8w",
   authDomain: "whatsfamily-d8aa6.firebaseapp.com",
   projectId: "whatsfamily-d8aa6",
-  storageBucket: "whatsfamily-d8aa6.firebasestorage.app",
-  messagingSenderId: "414240543274",
-  appId: "1:414240543274:web:c9979a6dd3433af8e9a953"
+  storageBucket: "whatsfamily-d8aa6.appspot.com",
+  messagingSenderId: "367399335606",
+  appId: "1:367399335606:web:658c14d9b4dbcb18ceb52c"
 });
 
+const db = firebase.firestore();
 const messaging = firebase.messaging();
 
-// Gestione messaggi notifiche in Background (App chiusa o ridotta a icona)
-messaging.onBackgroundMessage((payload) => {
-  console.log('[service-worker.js] Notifica ricevuta in background:', payload);
-
-  const title = payload.notification?.title || "WhatsFamily 🏡";
-  const options = {
-    body: payload.notification?.body || "Nuovo messaggio ricevuto",
-    icon: './icon001.png',
-    badge: './icon001.png',
-    data: payload.data || {},
-    tag: 'whatsfamily-msg',
-    renotify: true
-  };
-
-  self.registration.showNotification(title, options);
-});
-
-// ==========================================
-// 2. CACHE SETTINGS & ASSETS (Incluso app.js!)
-// ==========================================
-const CACHE_NAME = 'whatsfamily-v2.6';
-const ASSETS = [
-  './',
-  './index.html',
-  './app.js',
-  './manifest.json',
-  './icon001.png'
+// Cache statici
+const CACHE_NAME = 'whatsfamily-v2.7';
+const urlsToCache = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png'
 ];
 
-// ==========================================
-// 3. INSTALL
-// ==========================================
-self.addEventListener('install', (e) => {
-  e.waitUntil(
+// Installazione Service Worker e Caching
+self.addEventListener('install', event => {
+  self.skipWaiting();
+  event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(ASSETS))
+      .then(cache => cache.addAll(urlsToCache))
   );
 });
 
-// ==========================================
-// 4. ASCOLTA IL COMANDO "SKIP_WAITING"
-// ==========================================
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
-
-// ==========================================
-// 5. ACTIVATE + ELIMINAZIONE VECCHIE CACHE
-// ==========================================
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => {
+// Attivazione e pulizia vecchie cache
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
+        cacheNames.map(cacheName => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
           }
         })
       );
@@ -81,65 +52,54 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// ==========================================
-// 6. FETCH: NETWORK-FIRST CON FALLBACK SU CACHE
-// ==========================================
-self.addEventListener('fetch', (e) => {
-  // Ignora le richieste non-GET
-  if (e.request.method !== 'GET') {
-    return;
+// Gestione Notifiche in Background e aggiornamento Doppia Spunta Grigia (Delivered)
+messaging.onBackgroundMessage((payload) => {
+  console.log('[service-worker.js] Notifica ricevuta in background:', payload);
+
+  const data = payload.data || {};
+  const chatId = data.chatId;
+  const messageId = data.messageId;
+
+  // Se la notifica contiene i dati del messaggio, aggiorniamo lo stato a 'delivered' su Firestore
+  if (chatId && messageId) {
+    db.collection('chats')
+      .doc(chatId)
+      .collection('messages')
+      .doc(messageId)
+      .update({ status: 'delivered' })
+      .then(() => {
+        console.log(`[service-worker.js] Stato messaggio ${messageId} aggiornato a DELIVERED`);
+      })
+      .catch((error) => {
+        console.error('[service-worker.js] Errore aggiornamento stato delivered:', error);
+      });
   }
 
-  const url = e.request.url;
+  const notificationTitle = payload.notification?.title || data.title || 'Nuovo Messaggio';
+  const notificationOptions = {
+    body: payload.notification?.body || data.body || 'Hai ricevuto un messaggio',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag: chatId || 'whatsfamily-notification',
+    data: data
+  };
 
-  // Ignora le chiamate API Firebase/Firestore e schemi non-http(s)
-  if (
-    !url.startsWith('http') ||
-    url.includes('firestore.googleapis.com') ||
-    url.includes('firebaseio.com') ||
-    url.includes('identitytoolkit') ||
-    url.includes('firebasestorage.googleapis.com') ||
-    url.includes('fcm.googleapis.com')
-  ) {
-    return;
-  }
-
-  e.respondWith(
-    fetch(e.request)
-      .then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(e.request, responseClone);
-          });
-        }
-        return networkResponse;
-      })
-      .catch(() => {
-        return caches.match(e.request);
-      })
-  );
+  return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// ==========================================
-// 7. NOTIFICATION CLICK HANDLER
-// ==========================================
-self.addEventListener('notificationclick', (e) => {
-  e.notification.close();
-
-  e.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
-        // Se c'è già una scheda dell'app aperta, portala in primo piano
-        for (const client of clientList) {
-          if ('focus' in client) {
-            return client.focus();
-          }
+// Click sulla notifica
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (let client of windowClients) {
+        if (client.url && 'focus' in client) {
+          return client.focus();
         }
-        // Altrimenti apri una nuova finestra dell'app
-        if (self.clients.openWindow) {
-          return self.clients.openWindow('./');
-        }
-      })
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
+    })
   );
 });
