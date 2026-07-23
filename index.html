@@ -127,7 +127,34 @@
             border-color: #8A2BE2; 
         } 
 
-        .login-box button { 
+        /* Contenitore campo password con occhio toggle */
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .password-wrapper input {
+            padding-right: 45px;
+        }
+
+        .toggle-password-btn {
+            position: absolute;
+            right: 12px;
+            top: 38%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            user-select: none;
+            opacity: 0.7;
+        }
+
+        .toggle-password-btn:hover {
+            opacity: 1;
+        }
+
+        .login-box button[type="submit"] { 
             width: 100%; 
             padding: 12px; 
             background-color: #8A2BE2; 
@@ -139,7 +166,7 @@
             font-weight: bold; 
         } 
 
-        .login-box button:hover { 
+        .login-box button[type="submit"]:hover { 
             background-color: #721ac7; 
         } 
 
@@ -429,7 +456,12 @@
             <p style="margin-bottom: 15px; font-size: 0.85rem; color: var(--text-muted);">Accesso riservato ai componenti autorizzati della famiglia</p>
             <form id="login-form"> 
                 <input type="email" id="login-email" placeholder="📧 Email di famiglia" required> 
-                <input type="password" id="login-password" placeholder="🔒 Password" required> 
+                
+                <div class="password-wrapper">
+                    <input type="password" id="login-password" placeholder="🔒 Password" required>
+                    <button type="button" id="toggle-password" class="toggle-password-btn" title="Mostra/Nascondi password">👁️</button>
+                </div>
+
                 <button type="submit">🚀 Entra nella Chat</button> 
             </form> 
         </div> 

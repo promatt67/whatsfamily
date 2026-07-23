@@ -7,133 +7,161 @@ initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
 
-// 1. NOTIFICHE PER LE CHAT PRIVATE 🔐
-exports.inviaNotificaChatPrivata = onDocumentCreated("chats/{chatId}/messages/{messageId}", async (event) => {
+const ID_SALA_RIUNIONI = "chat_sala_riunioni";
+
+// GESTORE UNICO PER NOTIFICHE (PRIVATE E SALA RIUNIONI)
+exports.gestisciNotificheChat = onDocumentCreated("chats/{chatId}/messages/{messageId}", async (event) => {
     const datiMessaggio = event.data.data();
     if (!datiMessaggio) return null;
-    
+
     const chatId = event.params.chatId;
-    const partecipanti = chatId.split("_");
-    const idDestinatario = partecipanti.find(uid => uid !== datiMessaggio.senderId);
-    
-    if (!idDestinatario) return null;
+    const senderId = datiMessaggio.senderId;
 
     try {
-        const userSnap = await db.collection("users").doc(idDestinatario).get();
-        if (!userSnap.exists) {
-            console.log(`Documento utente ${idDestinatario} non trovato.`);
-            return null;
-        }
-        
-        const datiDestinatario = userSnap.data() || {};
-        
-        // Verifica se l'utente sta già attivamente guardando la conversazione
-        if (datiDestinatario.stato === "🟢 Online" && datiDestinatario.typingTo === datiMessaggio.senderId) {
-            console.log("L'utente sta già guardando questa chat. Notifica push saltata.");
-            return null;
-        }
-
-        const tokenFCM = datiDestinatario.fcmToken;
-        if (!tokenFCM) {
-            console.log(`L'utente ${idDestinatario} non ha un fcmToken registrato.`);
-            return null;
-        }
-
-        const mittenteSnap = await db.collection("users").doc(datiMessaggio.senderId).get();
+        // Recupera nome mittente
+        const mittenteSnap = await db.collection("users").doc(senderId).get();
         const nomeMittente = mittenteSnap.exists ? ((mittenteSnap.data() || {}).nome || "Qualcuno") : "Un familiare";
 
-        let testoNotifica = datiMessaggio.text || "Ti ha inviato un file";
+        let testoNotifica = datiMessaggio.text || "Ha inviato un allegato";
         if (datiMessaggio.fileType === "image") testoNotifica = "📷 Foto";
         else if (datiMessaggio.fileType === "video") testoNotifica = "🎥 Video";
         else if (datiMessaggio.fileType === "audio") testoNotifica = "🎙️ Vocale";
 
-        // STRUTTURA AD ALTA VELOCITÀ SENZA DOPPIONI
-        const payload = {
-            token: tokenFCM,
-            data: {
-                title: `💬 ${nomeMittente}`,
-                body: testoNotifica,
-                chatId: chatId
-            },
-            android: {
-                priority: "high"
-            },
-            webpush: {
-                headers: { Urgency: "high" }
+        // CASO 1: SALA RIUNIONI
+        if (chatId === ID_SALA_RIUNIONI) {
+            const utentiSnap = await db.collection("users").get();
+            const tokens = [];
+            const tokenToUidMap = {}; // Per tracciare quali token appartengono a quali utenti in caso di errori
+
+            utentiSnap.forEach(uDoc => {
+                const datiU = uDoc.data() || {};
+                
+                // Salta se è il mittente o se l'utente è attualmente dentro la Sala Riunioni
+                if (uDoc.id !== senderId && datiU.typingTo !== ID_SALA_RIUNIONI) {
+                    if (datiU.fcmToken) {
+                        tokens.push(datiU.fcmToken);
+                        tokenToUidMap[datiU.fcmToken] = uDoc.id;
+                    }
+                }
+            });
+
+            if (tokens.length === 0) return null;
+
+            const payloadGruppo = {
+                tokens: tokens,
+                notification: {
+                    title: `🏠 Sala Riunioni (${nomeMittente})`,
+                    body: testoNotifica
+                },
+                data: {
+                    title: `🏠 Sala Riunioni (${nomeMittente})`,
+                    body: testoNotifica,
+                    chatId: chatId,
+                    icon: "./icon001.png"
+                },
+                android: {
+                    priority: "high",
+                    notification: { sound: "default", priority: "high", channelId: "default" }
+                },
+                apns: {
+                    payload: { aps: { sound: "default", badge: 1, "content-available": 1 } }
+                },
+                webpush: {
+                    headers: { Urgency: "high" },
+                    fcmOptions: {
+                        link: "./index.html"
+                    }
+                }
+            };
+
+            const response = await messaging.sendEachForMulticast(payloadGruppo);
+            console.log(`✅ Notifiche Sala Riunioni inviate: ${response.successCount} con successo, ${response.failureCount} fallite.`);
+
+            // Pulizia automatica dei token FCM scaduti o non più validi
+            if (response.failureCount > 0) {
+                const cleanupPromises = [];
+                response.responses.forEach((resp, idx) => {
+                    if (!resp.success) {
+                        const errorCode = resp.error?.code;
+                        if (errorCode === "messaging/invalid-registration-token" || errorCode === "messaging/registration-token-not-registered") {
+                            const failedToken = tokens[idx];
+                            const failedUid = tokenToUidMap[failedToken];
+                            if (failedUid) {
+                                console.log(`🗑️ Rimuovo token scaduto per utente: ${failedUid}`);
+                                cleanupPromises.push(db.collection("users").doc(failedUid).update({ fcmToken: null }));
+                            }
+                        }
+                    }
+                });
+                await Promise.all(cleanupPromises);
             }
-        };
 
-        const response = await messaging.send(payload);
-        console.log("Notifica privata inviata con successo:", response);
-    } catch (error) {
-        console.error("Errore nell'invio della notifica privata:", error);
-    }
-    return null;
-});
+        } else {
+            // CASO 2: CHAT PRIVATA 1-A-1
+            const partecipanti = chatId.split("_");
+            const idDestinatario = partecipanti.find(uid => uid !== senderId);
 
-// 2. NOTIFICHE PER I GRUPPI DI FAMIGLIA 👥
-exports.inviaNotificaGruppo = onDocumentCreated("groups/{groupId}/messages/{messageId}", async (event) => {
-    const datiMessaggio = event.data.data();
-    if (!datiMessaggio) return null;
-    
-    const groupId = event.params.groupId;
+            if (!idDestinatario) return null;
 
-    try {
-        const gruppoSnap = await db.collection("groups").doc(groupId).get();
-        if (!gruppoSnap.exists) return null;
-        
-        const datiGruppo = gruppoSnap.data() || {};
-        const membri = datiGruppo.members || [];
+            const userSnap = await db.collection("users").doc(idDestinatario).get();
+            if (!userSnap.exists) return null;
 
-        const mittenteSnap = await db.collection("users").doc(datiMessaggio.senderId).get();
-        const nomeMittente = mittenteSnap.exists ? ((mittenteSnap.data() || {}).nome || "Qualcuno") : "Un familiare";
+            const datiDestinatario = userSnap.data() || {};
 
-        let testoNotifica = datiMessaggio.text || "Ha inviato un file";
-        if (datiMessaggio.fileType === "image") testoNotifica = "📷 Foto";
-        else if (datiMessaggio.fileType === "video") testoNotifica = "🎥 Video";
-        else if (datiMessaggio.fileType === "audio") testoNotifica = "🎙️ Vocale";
+            // Notifica inviata solo se il destinatario NON ha aperta la chat
+            if (datiDestinatario.typingTo === chatId) {
+                console.log("L'utente sta già guardando questa specifica chat. Notifica saltata.");
+                return null;
+            }
 
-        const destinatariPromesse = membri
-            .filter(uid => uid !== datiMessaggio.senderId)
-            .map(uid => db.collection("users").doc(uid).get());
+            const tokenFCM = datiDestinatario.fcmToken;
+            if (!tokenFCM) {
+                console.log("Destinatario privo di token FCM.");
+                return null;
+            }
 
-        const utentiSnap = await Promise.all(destinatariPromesse);
-        const tokens = [];
+            const payloadPrivato = {
+                token: tokenFCM,
+                notification: {
+                    title: `💬 ${nomeMittente}`,
+                    body: testoNotifica
+                },
+                data: {
+                    title: `💬 ${nomeMittente}`,
+                    body: testoNotifica,
+                    chatId: chatId,
+                    icon: "./icon001.png"
+                },
+                android: {
+                    priority: "high",
+                    notification: { sound: "default", priority: "high", channelId: "default" }
+                },
+                apns: {
+                    payload: { aps: { sound: "default", badge: 1, "content-available": 1 } }
+                },
+                webpush: {
+                    headers: { Urgency: "high" },
+                    fcmOptions: {
+                        link: "./index.html"
+                    }
+                }
+            };
 
-        utentiSnap.forEach(uSnap => {
-            if (uSnap.exists) {
-                const datiU = uSnap.data() || {};
-                if (datiU.fcmToken) {
-                    tokens.push(datiU.fcmToken);
+            try {
+                await messaging.send(payloadPrivato);
+                console.log("✅ Notifica Privata inviata a:", idDestinatario);
+            } catch (sendError) {
+                if (sendError.code === "messaging/invalid-registration-token" || sendError.code === "messaging/registration-token-not-registered") {
+                    console.log(`🗑️ Rimuovo token scaduto per utente: ${idDestinatario}`);
+                    await db.collection("users").doc(idDestinatario).update({ fcmToken: null });
+                } else {
+                    throw sendError;
                 }
             }
-        });
-
-        if (tokens.length === 0) {
-            console.log("Nessun token valido trovato per i membri del gruppo.");
-            return null;
         }
 
-        // STRUTTURA AD ALTA VELOCITÀ MULTICAST SENZA DOPPIONI
-        const payload = {
-            tokens: tokens,
-            data: {
-                title: `👥 ${datiGruppo.name} (${nomeMittente})`,
-                body: testoNotifica,
-                groupId: groupId
-            },
-            android: {
-                priority: "high"
-            },
-            webpush: {
-                headers: { Urgency: "high" }
-            }
-        };
-
-        const response = await messaging.sendEachForMulticast(payload);
-        console.log(`${response.successCount} notifiche di gruppo inviate.`);
     } catch (error) {
-        console.error("Errore nell'invio della notifica di gruppo:", error);
+        console.error("❌ Errore nell'invio della notifica:", error);
     }
     return null;
 });

@@ -1,75 +1,113 @@
 // ==========================================
-// IMPORTS (DEVONO ESSERE IN CIMA AL FILE)
+// 1. IMPORTAZIONE SDK FIREBASE MESSAGING (Compat)
 // ==========================================
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js'); //
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js'); //
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
+
+// Inizializzazione Firebase nel Service Worker per Notifiche Background
+firebase.initializeApp({
+  apiKey: "AIzaSyCMBZjMytN2Q9M6P1iT4vMx4q7y_nVgK8w",
+  authDomain: "whatsfamily-d8aa6.firebaseapp.com",
+  projectId: "whatsfamily-d8aa6",
+  storageBucket: "whatsfamily-d8aa6.firebasestorage.app",
+  messagingSenderId: "414240543274",
+  appId: "1:414240543274:web:c9979a6dd3433af8e9a953"
+});
+
+const messaging = firebase.messaging();
+
+// Gestione messaggi notifiche in Background (App chiusa o ridotta a icona)
+messaging.onBackgroundMessage((payload) => {
+  console.log('[service-worker.js] Notifica ricevuta in background:', payload);
+
+  const title = payload.notification?.title || "WhatsFamily 🏡";
+  const options = {
+    body: payload.notification?.body || "Nuovo messaggio ricevuto",
+    icon: './icon001.png',
+    badge: './icon001.png',
+    data: payload.data || {},
+    tag: 'whatsfamily-msg',
+    renotify: true
+  };
+
+  self.registration.showNotification(title, options);
+});
 
 // ==========================================
-// CACHE SETTINGS (Aggiornata versione per forzare il refresh)
+// 2. CACHE SETTINGS & ASSETS (Incluso app.js!)
 // ==========================================
-const CACHE_NAME = 'whatsfamily-v8.2.1'; 
-const ASSETS = [ //
-  './', //[cite: 1]
-  './index.html', //[cite: 1]
-  './manifest.json', //[cite: 1]
-  './icon001.png' //[cite: 1]
+const CACHE_NAME = 'whatsfamily-v2.6';
+const ASSETS = [
+  './',
+  './index.html',
+  './app.js',
+  './manifest.json',
+  './icon001.png'
 ];
 
 // ==========================================
-// INSTALL
+// 3. INSTALL
 // ==========================================
-self.addEventListener('install', (e) => { //[cite: 1]
-  e.waitUntil( //[cite: 1]
-    caches.open(CACHE_NAME) //[cite: 1]
-      .then((cache) => cache.addAll(ASSETS)) //[cite: 1]
-      .then(() => self.skipWaiting()) //[cite: 1]
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(ASSETS))
   );
 });
 
 // ==========================================
-// ACTIVATE + CLEAN OLD CACHES
+// 4. ASCOLTA IL COMANDO "SKIP_WAITING"
 // ==========================================
-self.addEventListener('activate', (e) => { //[cite: 1]
-  e.waitUntil( //[cite: 1]
-    caches.keys().then((keys) => { //[cite: 1]
-      return Promise.all( //[cite: 1]
-        keys.map((key) => { //[cite: 1]
-          if (key !== CACHE_NAME) { //[cite: 1]
-            return caches.delete(key); //[cite: 1]
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// ==========================================
+// 5. ACTIVATE + ELIMINAZIONE VECCHIE CACHE
+// ==========================================
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
           }
         })
       );
-    }).then(() => self.clients.claim()) //[cite: 1]
+    }).then(() => self.clients.claim())
   );
 });
 
 // ==========================================
-// FETCH: NETWORK-FIRST CON FALLBACK SU CACHE
+// 6. FETCH: NETWORK-FIRST CON FALLBACK SU CACHE
 // ==========================================
-self.addEventListener('fetch', (e) => { //[cite: 1]
-
-  // Evita di intercettare richieste non GET
-  if (e.request.method !== 'GET') { //[cite: 1]
-    return fetch(e.request); //[cite: 1]
+self.addEventListener('fetch', (e) => {
+  // Ignora le richieste non-GET
+  if (e.request.method !== 'GET') {
+    return;
   }
 
-  // Evita ASSOLUTAMENTE di mettere in cache richieste Firebase e Storage
+  const url = e.request.url;
+
+  // Ignora le chiamate API Firebase/Firestore e schemi non-http(s)
   if (
-    e.request.url.includes('firestore.googleapis.com') || //[cite: 1]
-    e.request.url.includes('firebaseio.com') || //[cite: 1]
-    e.request.url.includes('identitytoolkit') || //[cite: 1]
-    e.request.url.includes('firebasestorage.googleapis.com') //[cite: 1]
+    !url.startsWith('http') ||
+    url.includes('firestore.googleapis.com') ||
+    url.includes('firebaseio.com') ||
+    url.includes('identitytoolkit') ||
+    url.includes('firebasestorage.googleapis.com') ||
+    url.includes('fcm.googleapis.com')
   ) {
-    return fetch(e.request); //[cite: 1]
+    return;
   }
 
-  // Strategia Network-First: prova prima la rete, così gli aggiornamenti si vedono subito.
-  // Se la rete fallisce (es. offline), usa la cache.
   e.respondWith(
     fetch(e.request)
       .then((networkResponse) => {
-        // Se la risposta è valida, aggiorna la cache in background
-        if (networkResponse && networkResponse.status === 200) {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(e.request, responseClone);
@@ -78,72 +116,30 @@ self.addEventListener('fetch', (e) => { //[cite: 1]
         return networkResponse;
       })
       .catch(() => {
-        // Siamo offline! Recupera il file locale dalla cache
-        return caches.match(e.request); //[cite: 1]
+        return caches.match(e.request);
       })
   );
 });
 
 // ==========================================
-// NOTIFICATION CLICK HANDLER
+// 7. NOTIFICATION CLICK HANDLER
 // ==========================================
-self.addEventListener('notificationclick', (e) => { //[cite: 1]
-  e.notification.close(); //[cite: 1]
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
 
-  e.waitUntil( //[cite: 1]
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }) //[cite: 1]
-      .then((clientList) => { //[cite: 1]
-        for (const client of clientList) { //[cite: 1]
-          if (client.url.includes('index.html') && 'focus' in client) { //[cite: 1]
-            return client.focus(); //[cite: 1]
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Se c'è già una scheda dell'app aperta, portala in primo piano
+        for (const client of clientList) {
+          if ('focus' in client) {
+            return client.focus();
           }
         }
-        if (self.clients.openWindow) { //[cite: 1]
-          return self.clients.openWindow('./index.html'); //[cite: 1]
+        // Altrimenti apri una nuova finestra dell'app
+        if (self.clients.openWindow) {
+          return self.clients.openWindow('./');
         }
       })
   );
-});
-
-// ==========================================
-// FIREBASE MESSAGING BACKGROUND
-// ==========================================
-const firebaseConfig = { //[cite: 1]
-  apiKey: "AIzaSyCMBZjMytN2Q9M6P1iT4vMx4q7y_nVgK8w", //[cite: 1]
-  authDomain: "whatsfamily-d8aa6.firebaseapp.com", //[cite: 1]
-  projectId: "whatsfamily-d8aa6", //[cite: 1]
-  storageBucket: "whatsfamily-d8aa6.firebasestorage.app", //[cite: 1]
-  messagingSenderId: "414240543274", //[cite: 1]
-  appId: "1:414240543274:web:c9979a6dd3433af8e9a953" //[cite: 1]
-};
-
-firebase.initializeApp(firebaseConfig); //[cite: 1]
-const messaging = firebase.messaging(); //[cite: 1]
-
-// ==========================================
-// NOTIFICHE BACKGROUND OTTIMIZZATE
-// ==========================================
-messaging.onBackgroundMessage((payload) => { //[cite: 1]
-  console.log('Notifica ricevuta in background:', payload); //[cite: 1]
-
-  // Evita duplicazioni (notifica già gestita dal browser)
-  if (payload.notification || payload.fcmOptions) { //[cite: 1]
-    return; //[cite: 1]
-  }
-
-  // Notifica personalizzata per data-only payload
-  if (payload.data) { //[cite: 1]
-    const titoloNotifica = payload.data.title || "💬 WhatsFamily 🏡"; //[cite: 1]
-    const opzioniNotifica = { //[cite: 1]
-      body: payload.data.body || "Nuovo messaggio in arrivo!", //[cite: 1]
-      icon: "./icon001.png", //[cite: 1]
-      badge: "./icon001.png", //[cite: 1]
-      tag: "whatsfamily-alert", //[cite: 1]
-      renotify: true, //[cite: 1]
-      requireInteraction: true, //[cite: 1]
-      vibrate: [300, 100, 300] //[cite: 1]
-    };
-
-    return self.registration.showNotification(titoloNotifica, opzioniNotifica); //[cite: 1]
-  }
 });
