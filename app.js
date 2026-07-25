@@ -628,15 +628,18 @@ function apriStanzaChat(nomeParente, isGroup = false, idParente = null) {
             badgeReazioniHtml += `</div>`; 
 
             let spunteHtml = ''; 
-            if (mioMessaggio && !isGroup) { 
-                if (dati.letto) { 
-                    spunteHtml = `<span style="color: #24a0ed; margin-left: 5px; font-weight: bold; font-size: 0.85rem;" title="Letto">✓✓</span>`; 
-                } else if (dati.consegnato) { 
-                    spunteHtml = `<span style="color: var(--text-muted); margin-left: 5px; font-size: 0.85rem;" title="Consegnato">✓✓</span>`; 
-                } else { 
-                    spunteHtml = `<span style="color: var(--text-muted); margin-left: 5px; font-size: 0.85rem;" title="Inviato">✓</span>`; 
-                } 
-            } 
+if (mioMessaggio && !isGroup) { 
+    if (dati.letto) { 
+        // Doppia spunta blu (Letto)
+        spunteHtml = `<span style="color: #34d399; margin-left: 5px; font-weight: bold; font-size: 0.85rem;" title="Letto">✓✓</span>`; 
+    } else if (dati.consegnato) { 
+        // Doppia spunta grigia (Consegnato ma non ancora aperto)
+        spunteHtml = `<span style="color: var(--text-muted); margin-left: 5px; font-size: 0.85rem;" title="Consegnato">✓✓</span>`; 
+    } else { 
+        // Singola spunta grigia (Inviato sul server)
+        spunteHtml = `<span style="color: var(--text-muted); margin-left: 5px; font-size: 0.85rem;" title="Inviato">✓</span>`; 
+    } 
+}
 
             const deleteBtnHtml = mioMessaggio ? `<button class="delete-btn" title="Elimina messaggio 🗑️">🗑️</button>` : '';
 

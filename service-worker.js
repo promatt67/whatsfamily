@@ -19,7 +19,7 @@ const db = firebase.firestore();
 const messaging = firebase.messaging();
 
 // Cache statici
-const CACHE_NAME = 'whatsfamily-v2.9';
+const CACHE_NAME = 'whatsfamily-v3';
 const urlsToCache = [
   './',
   './index.html',
@@ -59,6 +59,7 @@ self.addEventListener('activate', event => {
 });
 
 // Gestione Notifiche in Background e aggiornamento Doppia Spunta Grigia (Delivered)
+// Gestione Notifiche in Background e aggiornamento Spunta Grigia (Consegnato)
 messaging.onBackgroundMessage((payload) => {
   console.log('[service-worker.js] Notifica ricevuta in background:', payload);
 
@@ -66,27 +67,28 @@ messaging.onBackgroundMessage((payload) => {
   const chatId = data.chatId;
   const messageId = data.messageId;
 
-  // Se la notifica contiene i dati del messaggio, aggiorniamo lo stato a 'delivered' su Firestore
+  // Se la notifica contiene i dati del messaggio, aggiorniamo il campo 'consegnato'
   if (chatId && messageId) {
     db.collection('chats')
       .doc(chatId)
       .collection('messages')
       .doc(messageId)
-      .update({ status: 'delivered' })
+      .update({ consegnato: true })
       .then(() => {
-        console.log(`[service-worker.js] Stato messaggio ${messageId} aggiornato a DELIVERED`);
+        console.log(`[service-worker.js] Stato messaggio ${messageId} aggiornato a CONSEGNATO`);
       })
       .catch((error) => {
-        console.error('[service-worker.js] Errore aggiornamento stato delivered:', error);
+        console.error('[service-worker.js] Errore aggiornamento consegnato:', error);
       });
   }
 
-  const notificationTitle = payload.notification?.title || data.title || 'Nuovo Messaggio';
+  const notificationTitle = payload.notification?.title || data.title || '💬 WhatsFamily 🏡';
   const notificationOptions = {
-    body: payload.notification?.body || data.body || 'Hai ricevuto un messaggio',
+    body: payload.notification?.body || data.body || 'Hai ricevuto un nuovo messaggio di famiglia',
     icon: './icon001.png',
     badge: './icon001.png',
     tag: chatId || 'whatsfamily-notification',
+    renotify: true,
     data: data
   };
 
