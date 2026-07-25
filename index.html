@@ -1,63 +1,540 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WhatsFamily</title>
-  
-  <style>
-    /* ========================================== */
-    /* STILE BANNER AGGIORNAMENTO                  */
-    /* ========================================== */
-    #update-banner { 
-        display: none; /* Nascosto di default, mostrato da app.js quando c'è un update */
-        position: fixed; 
-        top: 20px; /* In alto al centro per massima visibilità */
-        left: 50%; 
-        transform: translateX(-50%); 
-        background: #8A2BE2; 
-        color: white; 
-        padding: 12px 24px; 
-        border-radius: 30px; 
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3); 
-        z-index: 99999; /* Sta sopra a qualsiasi altro elemento/chat */
-        align-items: center; 
-        gap: 15px; 
-        font-weight: bold; 
-        font-family: system-ui, -apple-system, sans-serif;
-    }
+<!DOCTYPE html> 
+<html lang="it"> 
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"> 
+    <title>💬 WhatsFamily 🏡</title> 
+     
+    <!-- Tag iOS PWA --> 
+    <meta name="apple-mobile-web-app-capable" content="yes"> 
+    <meta name="apple-mobile-web-app-status-bar-style" content="default"> 
+    <meta name="apple-mobile-web-app-title" content="WhatsFamily"> 
+    <link rel="apple-touch-icon" href="./icon001.png"> 
+     
+    <link rel="manifest" href="manifest.json"> 
+    <style> 
+        /* ========================================== 
+           TAVOLOZZA COLORI E TEMA CSS
+           ========================================== */ 
+        :root { 
+            --bg-color: #f3f4f6; 
+            --box-bg: #ffffff; 
+            --text-color: #1f2937; 
+            --text-muted: #6b7280; 
+            --border-color: #e5e7eb; 
+            --chat-bg: #efeae2; 
+            --contact-hover: #f5f0ff; 
+            --contact-active: #eaddff; 
+            --input-bg: #f0f2f5; 
+            --msg-sent-bg: #8A2BE2; 
+            --msg-sent-text: #ffffff; 
+            --msg-received-bg: #ffffff; 
+            --msg-received-text: #1f2937; 
+            --contact-name-color: #333333; 
+            --placeholder-color: #9ca3af; 
+            --reaction-bar-bg: #ffffff; 
+            --reaction-bar-border: #e5e7eb; 
+            --reaction-badge-bg: #f3f4f6; 
+            --audio-player-bg: #e5e7eb; 
+            --audio-player-text: #1f2937; 
+        } 
 
-    #update-banner button {
-        background: #ffffff;
-        color: #8A2BE2;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: transform 0.2s ease;
-    }
+        body.dark-mode { 
+            --bg-color: #111827; 
+            --box-bg: #1f2937; 
+            --text-color: #f9fafb; 
+            --text-muted: #9ca3af; 
+            --border-color: #374151; 
+            --chat-bg: #0f172a; 
+            --contact-hover: #312e81; 
+            --contact-active: #4c1d95; 
+            --input-bg: #1f2937; 
+            --msg-sent-bg: #8A2BE2; 
+            --msg-sent-text: #ffffff; 
+            --msg-received-bg: #374151; 
+            --msg-received-text: #f9fafb; 
+            --contact-name-color: #f3f4f6; 
+            --placeholder-color: #6b7280; 
+            --reaction-bar-bg: #1f2937; 
+            --reaction-bar-border: #374151; 
+            --reaction-badge-bg: #374151; 
+            --audio-player-bg: #4b5563; 
+            --audio-player-text: #f9fafb; 
+        } 
 
-    #update-banner button:active {
-        transform: scale(0.95);
-    }
-  </style>
-</head>
-<body>
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            transition: background-color 0.3s, border-color 0.3s; 
+        } 
 
-  <!-- ========================================== -->
-  <!-- BANNER AGGIORNAMENTO (IN ALTO A INIZIO BODY)-->
-  <!-- ========================================== -->
-  <div id="update-banner">
-    <span>Nuova versione disponibile!</span>
-    <!-- FIX: id allineato a quello cercato in app.js (era "update-btn") -->
-    <button id="reload-update-btn">Aggiorna 🚀</button>
-  </div>
+        html, body { 
+            width: 100%; 
+            height: 100dvh; 
+            overflow: hidden; 
+        } 
 
-  <!-- Il resto della tua app WhatsFamily (login, chat, ecc.) va qui sotto -->
-  <!-- IMPORTANTE: verifica che qui sotto, prima di </body>, ci sia:
-       <script type="module" src="./app.js"></script>
-       Senza questo tag, app.js non viene mai eseguito. -->
+        body { 
+            background-color: var(--bg-color); 
+            display: flex; 
+            flex-direction: column; 
+            color: var(--text-color); 
+        } 
 
-</body>
+        /* SCHERMATA LOGIN */
+        #login-screen { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            flex: 1; 
+            padding: 20px; 
+            background-color: var(--bg-color); 
+            height: 100dvh; 
+        } 
+
+        .login-box { 
+            background: var(--box-bg); 
+            padding: 30px; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); 
+            width: 100%; 
+            max-width: 400px; 
+            text-align: center; 
+            color: var(--text-color); 
+        } 
+
+        .login-box h2 { 
+            margin-bottom: 20px; 
+            color: #8A2BE2; 
+        } 
+
+        .login-box input { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 15px; 
+            border: 1px solid var(--border-color); 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            border-radius: 8px; 
+            font-size: 1rem; 
+            outline: none; 
+        } 
+
+        .login-box input:focus { 
+            border-color: #8A2BE2; 
+        } 
+
+        /* Contenitore campo password con occhio toggle */
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .password-wrapper input {
+            padding-right: 45px;
+        }
+
+        .toggle-password-btn {
+            position: absolute;
+            right: 12px;
+            top: 38%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            user-select: none;
+            opacity: 0.7;
+        }
+
+        .toggle-password-btn:hover {
+            opacity: 1;
+        }
+
+        .login-box button[type="submit"] { 
+            width: 100%; 
+            padding: 12px; 
+            background-color: #8A2BE2; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 1rem; 
+            cursor: pointer; 
+            font-weight: bold; 
+        } 
+
+        .login-box button[type="submit"]:hover { 
+            background-color: #721ac7; 
+        } 
+
+        /* LAYOUT CHAT */
+        #chat-screen { 
+            width: 100vw; 
+            height: 100dvh; 
+        } 
+
+        #main-layout { 
+            width: 100%; 
+            height: 100%; 
+            display: flex; 
+        } 
+
+        #contacts-panel { 
+            width: 350px; 
+            max-width: 40%; 
+            height: 100%; 
+            background: var(--box-bg); 
+            border-right: 1px solid var(--border-color); 
+            display: flex; 
+            flex-direction: column; 
+            flex-shrink: 0; 
+        } 
+
+        #conversation-panel { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            background-color: var(--chat-bg); 
+            height: 100%; 
+            position: relative; 
+        } 
+
+        .contact-item { 
+            transition: background 0.2s; 
+        } 
+        .contact-item:hover {  
+            background-color: var(--contact-hover); 
+        } 
+        .contact-item.active {  
+            background-color: var(--contact-active); 
+        } 
+
+        /* MESSAGGI */
+        .message-wrapper { 
+            display: flex; 
+            flex-direction: column; 
+            position: relative; 
+            max-width: 75%; 
+            margin-bottom: 18px; 
+        } 
+
+        .message-wrapper.sent { 
+            align-self: flex-end; 
+        } 
+
+        .message-wrapper.received { 
+            align-self: flex-start; 
+        } 
+
+        .message { 
+            width: 100%; 
+            padding: 10px 14px; 
+            border-radius: 12px; 
+            font-size: 0.95rem; 
+            line-height: 1.4; 
+            word-wrap: break-word; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
+            position: relative; 
+        } 
+
+        .message.sent { 
+            background-color: var(--msg-sent-bg); 
+            color: var(--msg-sent-text); 
+            border-top-right-radius: 0; 
+        } 
+
+        .message.sent .sender-name, .message.sent .timestamp { 
+            color: #f3e8ff; 
+        } 
+
+        .message.received { 
+            background-color: var(--msg-received-bg); 
+            color: var(--msg-received-text); 
+            border-top-left-radius: 0; 
+        } 
+
+        .sender-name { 
+            font-size: 0.75rem; 
+            color: #a855f7; 
+            font-weight: bold; 
+            margin-bottom: 3px; 
+            display: block; 
+        } 
+
+        .timestamp { 
+            font-size: 0.7rem; 
+            color: var(--text-muted); 
+            text-align: right; 
+            margin-top: 4px; 
+            display: block; 
+        } 
+
+        .voice-message-player { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            background-color: var(--audio-player-bg); 
+            padding: 8px 12px; 
+            border-radius: 10px; 
+            margin-top: 5px; 
+            color: var(--audio-player-text); 
+        } 
+
+        .voice-message-player audio { 
+            max-width: 100%; 
+            height: 30px; 
+            outline: none; 
+        } 
+
+        /* BARRA REAZIONI VELOCI PER I MESSAGGI */
+        .reaction-bar { 
+            display: none; 
+            position: absolute; 
+            top: -45px; 
+            background-color: var(--reaction-bar-bg); 
+            border: 1px solid var(--reaction-bar-border); 
+            border-radius: 20px; 
+            padding: 5px 10px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+            z-index: 100; 
+            gap: 10px; 
+            animation: bounceIn 0.2s ease; 
+        } 
+
+        .message-wrapper:hover .reaction-bar, .message-wrapper.show-reactions .reaction-bar { 
+            display: flex; 
+        } 
+
+        .reaction-emoji { 
+            font-size: 1.2rem; 
+            cursor: pointer; 
+            transition: transform 0.1s; 
+        } 
+
+        .reaction-emoji:hover { 
+            transform: scale(1.3); 
+        } 
+
+        .reactions-container { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 4px; 
+            position: absolute; 
+            bottom: -12px; 
+            z-index: 5; 
+        } 
+
+        .message-wrapper.sent .reactions-container { right: 10px; } 
+        .message-wrapper.received .reactions-container { left: 10px; } 
+
+        .reaction-badge { 
+            background-color: var(--reaction-badge-bg); 
+            border-radius: 12px; 
+            padding: 2px 6px; 
+            font-size: 0.75rem; 
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); 
+            display: flex; 
+            align-items: center; 
+            gap: 3px; 
+            cursor: pointer; 
+        } 
+
+        /* PANNELLO EMOJI PER LA SCHERMATA DI SCRITTURA */
+        #emoji-picker-panel {
+            display: none;
+            position: absolute;
+            bottom: 70px;
+            left: 10px;
+            background-color: var(--box-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            z-index: 200;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        #emoji-picker-panel span {
+            font-size: 1.4rem;
+            cursor: pointer;
+            text-align: center;
+            padding: 4px;
+            border-radius: 6px;
+        }
+
+        #emoji-picker-panel span:hover {
+            background-color: var(--border-color);
+        }
+
+        /* BANNER AGGIORNAMENTO AGGIUNTIVO */
+        #update-banner { 
+            display: none; 
+            position: fixed; 
+            bottom: 20px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: #8A2BE2; 
+            color: white; 
+            padding: 12px 24px; 
+            border-radius: 30px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            z-index: 9999; 
+            align-items: center; 
+            gap: 15px; 
+            font-weight: bold; 
+        } 
+
+        #update-banner button { 
+            background: white; 
+            color: #8A2BE2; 
+            border: none; 
+            padding: 6px 12px; 
+            border-radius: 15px; 
+            cursor: pointer; 
+            font-weight: bold; 
+        } 
+
+        @keyframes bounceIn { 
+            0% { transform: scale(0.3); opacity: 0; } 
+            50% { transform: scale(1.05); } 
+            70% { transform: scale(0.9); } 
+            100% { transform: scale(1); opacity: 1; } 
+        } 
+
+        .delete-btn { 
+            background: none; 
+            border: none; 
+            color: #ff4d4d; 
+            cursor: pointer; 
+            font-size: 0.85rem; 
+            opacity: 0.7; 
+            transition: opacity 0.2s; 
+            padding: 0 5px; 
+        } 
+        .delete-btn:hover { opacity: 1; } 
+
+        @media (max-width: 768px) { 
+            #contacts-panel { max-width: 100% !important; width: 100% !important; } 
+            #conversation-panel { display: none !important; } 
+            
+            body.in-chat #contacts-panel { display: none !important; } 
+            body.in-chat #conversation-panel { 
+                display: flex !important; 
+                width: 100% !important; 
+                height: 100dvh !important; 
+                flex-direction: column; 
+            } 
+            body.in-chat #back-btn { display: block !important; } 
+
+            #input-container {
+                padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+            }
+            
+            [id^="anteprima-"] {
+                max-width: 130px !important;
+            }
+        } 
+    </style> 
+</head> 
+<body> 
+
+    <div id="update-banner"> 
+        <span>✨ Nuova versione disponibile per la famiglia!</span> 
+        <button id="reload-update-btn">Aggiorna 🚀</button> 
+    </div> 
+
+    <!-- SCHERMATA LOGIN PER EMAIL AUTORIZZATE -->
+    <div id="login-screen"> 
+        <div class="login-box"> 
+            <h2>🔑 WhatsFamily 🏡</h2> 
+            <p style="margin-bottom: 15px; font-size: 0.85rem; color: var(--text-muted);">Accesso riservato ai componenti autorizzati della famiglia</p>
+            <form id="login-form"> 
+                <input type="email" id="login-email" placeholder="📧 Email di famiglia" required> 
+                
+                <div class="password-wrapper">
+                    <input type="password" id="login-password" placeholder="🔒 Password" required>
+                    <button type="button" id="toggle-password" class="toggle-password-btn" title="Mostra/Nascondi password">👁️</button>
+                </div>
+
+                <button type="submit">🚀 Entra nella Chat</button> 
+            </form> 
+        </div> 
+    </div> 
+
+    <!-- SCHERMATA CHAT GENERALE -->
+    <div id="chat-screen" style="display: none; background-color: var(--chat-bg);"> 
+        <div id="main-layout"> 
+             
+            <!-- PANNELLO CONTATTI E GRUPPI -->
+            <div id="contacts-panel"> 
+                <header style="background-color: #8A2BE2; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;"> 
+                    <h2 style="font-size: 1.1rem;">👥 Famiglia</h2> 
+                    <div style="display: flex; gap: 5px; align-items: center;"> 
+                        <button id="theme-toggle" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 5px 10px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 3px;">🌙 Scuro</button> 
+                        <button id="logout-btn" style="background: transparent; border: 1px solid white; color: white; padding: 5px 10px; border-radius: 20px; cursor: pointer; font-size: 0.8rem;">🚪 Uscita</button> 
+                    </div> 
+                </header> 
+                <div id="contacts-list" style="flex: 1; overflow-y: auto;"></div> 
+            </div> 
+
+            <!-- PANNELLO CONVERSAZIONE ATTIVA -->
+            <div id="conversation-panel"> 
+                <header style="background-color: #8A2BE2; color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between; z-index: 10;"> 
+                    <div style="display: flex; align-items: center; gap: 10px;"> 
+                        <button id="back-btn" style="background: transparent; border: none; color: white; font-size: 1.2rem; cursor: pointer; display: none;">⬅️</button> 
+                        <div> 
+                            <h1 id="active-chat-name" style="font-size: 1.2rem; color: white;">👋 Seleziona una chat</h1> 
+                            <span id="active-chat-status" style="font-size: 0.8rem; color: #f3e8ff;">✨ per iniziare!</span> 
+                        </div> 
+                    </div> 
+                    <!-- PULSANTE SCOPA PER PULIRE L'INTERA CHAT -->
+                    <button id="clear-chat-btn" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: none; align-items: center; justify-content: center;" title="Ripulisci intera chat 🧹">🧹</button> 
+                </header> 
+
+                <div id="chat-container" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; min-height: 0;"></div> 
+
+                <!-- TASTIERA DI SELEZIONE EMOJI -->
+                <div id="emoji-picker-panel">
+                    <span>😀</span><span>😂</span><span>😍</span><span>🥰</span><span>😎</span><span>👍</span>
+                    <span>🙏</span><span>❤️</span><span>🎉</span><span>💩</span><span>🔥</span><span>👏</span>
+                    <span>🍕</span><span>☕</span><span>🥳</span><span>😭</span><span>🤔</span><span>😴</span>
+                </div>
+
+                <form id="input-container" style="background-color: var(--input-bg); padding: 12px 10px; display: flex; gap: 8px; align-items: center; position: relative; width: 100%; z-index: 10; margin-bottom: env(safe-area-inset-bottom, 0px); border-top: 1px solid var(--border-color);"> 
+                     
+                    <!-- Tasto Emoji 😀 -->
+                    <button type="button" id="emoji-btn" style="background-color: var(--border-color); color: var(--text-color); border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Scegli Emoji 😀">😀</button>
+
+                    <!-- Selezione File Generica (Graffetta per documenti/iPhone) -->
+                    <label for="file-input" style="background-color: var(--border-color); color: var(--text-color); width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;" title="Carica file 📎">📎</label> 
+                    <input type="file" id="file-input" style="display: none;"> 
+
+                    <!-- Fotocamera / Video per Android / iOS -->
+                    <label for="camera-input" style="background-color: var(--border-color); color: var(--text-color); width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;" title="Scatta Foto o Video 📷">📷</label> 
+                    <input type="file" id="camera-input" accept="image/*,video/*" capture="user" style="display: none;">
+
+                    <!-- Vocale -->
+                    <button type="button" id="voice-btn" style="background-color: var(--border-color); color: var(--text-color); border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Registra Vocale 🎙️">🎙️</button> 
+
+                    <input type="text" id="message-input" placeholder="✏️ Scrivi un messaggio..." autocomplete="off" disabled required style="flex: 1; padding: 12px; border: none; border-radius: 20px; outline: none; font-size: 1rem; min-width: 0; background-color: var(--msg-received-bg); color: var(--text-color);"> 
+                     
+                    <button type="submit" id="send-btn" style="background-color: #8A2BE2; color: white; border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Invia messaggio 🚀">✈️</button> 
+
+                    <div id="upload-loader" style="display: none; position: absolute; top: -40px; left: 0; right: 0; background-color: #8A2BE2; color: white; text-align: center; padding: 8px; font-size: 0.9rem; font-weight: bold; box-shadow: 0 -2px 5px rgba(0,0,0,0.1);"> 
+                        🚀 Invio in corso... Attendere! ⏳✨ 
+                    </div> 
+                </form> 
+            </div> 
+        </div> 
+    </div> 
+
+    <!-- Script Principale JS -->
+    <script type="module" src="./app.js"></script> 
+</body> 
 </html>
