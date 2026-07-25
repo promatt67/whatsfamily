@@ -18,8 +18,8 @@ firebase.initializeApp({
 const db = firebase.firestore();
 const messaging = firebase.messaging();
 
-// Cache statici
-const CACHE_NAME = 'whatsfamily-v3';
+// Cache statici (incrementa il numero di versione ad ogni modifica importante)
+const CACHE_NAME = 'whatsfamily-v4.0';
 const urlsToCache = [
   './',
   './index.html',
@@ -27,9 +27,12 @@ const urlsToCache = [
   './icon001.png'
 ];
 
-// Installazione Service Worker e Caching
+// ==========================================
+// 2. CICLO DI VITA SERVICE WORKER
+// ==========================================
+
+// Installazione Service Worker e Caching (SENZA self.skipWaiting automatico)
 self.addEventListener('install', event => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       return Promise.all(
@@ -48,18 +51,44 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
+        cacheNames
+          .filter(cacheName => cacheName !== CACHE_NAME)
+          .map(cacheName => caches.delete(cacheName))
       );
     }).then(() => self.clients.claim())
   );
 });
 
-// Gestione Notifiche in Background e aggiornamento Doppia Spunta Grigia (Delivered)
-// Gestione Notifiche in Background e aggiornamento Spunta Grigia (Consegnato)
+// Gestione messaggi inviati da app.js (es. pulsante "Aggiorna 🚀")
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// ==========================================
+// 3. RECUPERO RISORSE (OFFLINE CACHE)
+// ==========================================
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+
+  event.respondWith(
+    caches.match(event.request).then(cachedResponse => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request).catch(() => {
+        if (event.request.headers.get('accept')?.includes('text/html')) {
+          return caches.match('./index.html');
+        }
+      });
+    })
+  );
+});
+
+// ==========================================
+// 4. NOTIFICHE PUSH IN BACKGROUND (SCHERMO SPENTO)
+// ==========================================
 messaging.onBackgroundMessage((payload) => {
   console.log('[service-worker.js] Notifica ricevuta in background:', payload);
 
@@ -67,7 +96,7 @@ messaging.onBackgroundMessage((payload) => {
   const chatId = data.chatId;
   const messageId = data.messageId;
 
-  // Se la notifica contiene i dati del messaggio, aggiorniamo il campo 'consegnato'
+  // Se la notifica contiene i dati del messaggio, aggiorniamo il campo 'consegnato' su Firestore
   if (chatId && messageId) {
     db.collection('chats')
       .doc(chatId)
@@ -95,7 +124,7 @@ messaging.onBackgroundMessage((payload) => {
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Click sulla notifica
+// Click sulla notifica a schermo spento / bloccato
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
@@ -106,7 +135,7 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow('/');
+        return clients.openWindow('./');
       }
     })
   );
