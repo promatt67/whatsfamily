@@ -50,10 +50,14 @@
   <!-- ========================================== -->
   <div id="update-banner">
     <span>Nuova versione disponibile!</span>
-    <button id="update-btn">Aggiorna 🚀</button>
+    <!-- FIX: id allineato a quello cercato in app.js (era "update-btn") -->
+    <button id="reload-update-btn">Aggiorna 🚀</button>
   </div>
 
   <!-- Il resto della tua app WhatsFamily (login, chat, ecc.) va qui sotto -->
+  <!-- IMPORTANTE: verifica che qui sotto, prima di </body>, ci sia:
+       <script type="module" src="./app.js"></script>
+       Senza questo tag, app.js non viene mai eseguito. -->
 
 </body>
 </html>

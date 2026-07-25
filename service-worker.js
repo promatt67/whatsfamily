@@ -19,12 +19,14 @@ const db = firebase.firestore();
 const messaging = firebase.messaging();
 
 // Cache statici (incrementa il numero di versione ad ogni modifica importante)
-const CACHE_NAME = 'whatsfamily-v5.0';
+// FIX: versione incrementata per forzare l'aggiornamento della cache su tutti i client
+const CACHE_NAME = 'whatsfamily-v5.1';
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
-  './icon001.png'
+  './icon001.png',
+  './app.js' // FIX: mancava - senza questo, offline l'app resta bianca perché lo script non è in cache
 ];
 
 // ==========================================
@@ -97,6 +99,11 @@ messaging.onBackgroundMessage((payload) => {
   const messageId = data.messageId;
 
   // Se la notifica contiene i dati del messaggio, aggiorniamo il campo 'consegnato' su Firestore
+  // NOTA: questa scrittura avviene senza un utente autenticato nel contesto del Service Worker.
+  // Se le regole di sicurezza Firestore richiedono request.auth != null per la collection
+  // "messages", questa update fallirà sempre (silenziosamente, finendo nel .catch qui sotto)
+  // e la spunta "consegnato" non si aggiornerà mai a schermo spento.
+  // Verifica le tue Firestore Rules per questo caso specifico.
   if (chatId && messageId) {
     db.collection('chats')
       .doc(chatId)
@@ -107,7 +114,7 @@ messaging.onBackgroundMessage((payload) => {
         console.log(`[service-worker.js] Stato messaggio ${messageId} aggiornato a CONSEGNATO`);
       })
       .catch((error) => {
-        console.error('[service-worker.js] Errore aggiornamento consegnato:', error);
+        console.error('[service-worker.js] Errore aggiornamento consegnato (verifica Firestore Rules):', error);
       });
   }
 
