@@ -15,6 +15,7 @@ exports.gestisciNotificheChat = onDocumentCreated("chats/{chatId}/messages/{mess
     if (!datiMessaggio) return null;
 
     const chatId = event.params.chatId;
+    const messageId = event.params.messageId; // 👈 Recuperiamo l'ID del messaggio
     const senderId = datiMessaggio.senderId;
 
     try {
@@ -31,12 +32,11 @@ exports.gestisciNotificheChat = onDocumentCreated("chats/{chatId}/messages/{mess
         if (chatId === ID_SALA_RIUNIONI) {
             const utentiSnap = await db.collection("users").get();
             const tokens = [];
-            const tokenToUidMap = {}; // Per tracciare quali token appartengono a quali utenti in caso di errori
+            const tokenToUidMap = {}; 
 
             utentiSnap.forEach(uDoc => {
                 const datiU = uDoc.data() || {};
                 
-                // Salta se è il mittente o se l'utente è attualmente dentro la Sala Riunioni
                 if (uDoc.id !== senderId && datiU.typingTo !== ID_SALA_RIUNIONI) {
                     if (datiU.fcmToken) {
                         tokens.push(datiU.fcmToken);
@@ -49,14 +49,15 @@ exports.gestisciNotificheChat = onDocumentCreated("chats/{chatId}/messages/{mess
 
             const payloadGruppo = {
                 tokens: tokens,
-                notification: {
-                    title: `🏠 Sala Riunioni (${nomeMittente})`,
-                    body: testoNotifica
-                },
+                // FIX: niente campo "notification" di primo livello - solo "data".
+                // Così il browser NON mostra la notifica in automatico e viene sempre
+                // eseguito onBackgroundMessage() nel service worker, che gestisce
+                // sia la visualizzazione che l'aggiornamento di "consegnato" su Firestore.
                 data: {
                     title: `🏠 Sala Riunioni (${nomeMittente})`,
                     body: testoNotifica,
                     chatId: chatId,
+                    messageId: messageId, // 👈 Fondamentale per la spunta del Service Worker
                     icon: "./icon001.png"
                 },
                 android: {
@@ -67,7 +68,10 @@ exports.gestisciNotificheChat = onDocumentCreated("chats/{chatId}/messages/{mess
                     payload: { aps: { sound: "default", badge: 1, "content-available": 1 } }
                 },
                 webpush: {
-                    headers: { Urgency: "high" },
+                    headers: { 
+                        Urgency: "high",
+                        TTL: "86400" // Conserva la notifica per 24h se il cell è offline
+                    },
                     fcmOptions: {
                         link: "./index.html"
                     }
@@ -108,7 +112,6 @@ exports.gestisciNotificheChat = onDocumentCreated("chats/{chatId}/messages/{mess
 
             const datiDestinatario = userSnap.data() || {};
 
-            // Notifica inviata solo se il destinatario NON ha aperta la chat
             if (datiDestinatario.typingTo === chatId) {
                 console.log("L'utente sta già guardando questa specifica chat. Notifica saltata.");
                 return null;
@@ -122,14 +125,13 @@ exports.gestisciNotificheChat = onDocumentCreated("chats/{chatId}/messages/{mess
 
             const payloadPrivato = {
                 token: tokenFCM,
-                notification: {
-                    title: `💬 ${nomeMittente}`,
-                    body: testoNotifica
-                },
+                // FIX: come sopra, niente "notification" di primo livello - solo "data",
+                // per forzare sempre il passaggio da onBackgroundMessage() lato client.
                 data: {
                     title: `💬 ${nomeMittente}`,
                     body: testoNotifica,
                     chatId: chatId,
+                    messageId: messageId, // 👈 Fondamentale per la spunta del Service Worker
                     icon: "./icon001.png"
                 },
                 android: {
@@ -140,7 +142,10 @@ exports.gestisciNotificheChat = onDocumentCreated("chats/{chatId}/messages/{mess
                     payload: { aps: { sound: "default", badge: 1, "content-available": 1 } }
                 },
                 webpush: {
-                    headers: { Urgency: "high" },
+                    headers: { 
+                        Urgency: "high",
+                        TTL: "86400"
+                    },
                     fcmOptions: {
                         link: "./index.html"
                     }
