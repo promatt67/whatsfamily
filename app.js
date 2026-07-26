@@ -127,19 +127,22 @@ async function richiediESalvaTokenNotifiche(userId) {
         
         const permission = await Notification.requestPermission(); 
         if (permission === "granted") { 
-            const fcmRegistration = await navigator.serviceWorker.ready;
-            
             const messagingInstance = getMessaging(app); 
+            
+            // Registriamo direttamente o usiamo la VAPID Key in modo sicuro
             const tokenCorrente = await getToken(messagingInstance, { 
-                serviceWorkerRegistration: fcmRegistration, 
                 vapidKey: "BHHKBMPf-i-ODMIFw4qYXDHEc0eNyT1GsxDnsjnYUO1z-WR1ffo9W_Eyvt_Id2oi0xwB9W3RdUxKpZcYgVYEx4A"  
             }); 
             
             if (tokenCorrente) { 
+                console.log("Token FCM generato con successo!");
                 await updateDoc(doc(db, "users", userId), { fcmToken: tokenCorrente }); 
             } 
         } 
-    } catch (err) { console.error("Errore Token Notifiche:", err); } 
+    } catch (err) { 
+        // Cattura l'errore senza far piantare tutta l'interfaccia!
+        console.error("Errore Token Notifiche:", err); 
+    }
 }
 
 // ELEMENTI DOM
