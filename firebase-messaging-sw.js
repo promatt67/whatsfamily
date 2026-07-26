@@ -3,12 +3,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-com
 
 // Inserisci qui le credenziali della tua configurazione Firebase
 firebase.initializeApp({
-  apiKey: "LA_TUA_API_KEY",
-  authDomain: "IL_TUO_PROJECT_ID.firebaseapp.com",
-  projectId: "IL_TUO_PROJECT_ID",
-  storageBucket: "IL_TUO_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "IL_TUO_MESSAGING_SENDER_ID",
-  appId: "IL_TUO_APP_ID"
+  apiKey: "AIzaSyCMBZjMytN2Q9M6P1iT4vMx4q7y_nVgK8w", 
+    authDomain: "whatsfamily-d8aa6.firebaseapp.com", 
+    projectId: "whatsfamily-d8aa6", 
+    storageBucket: "whatsfamily-d8aa6.firebasestorage.app", 
+    messagingSenderId: "414240543274", 
+    appId: "1:414240543274:web:c9979a6dd3433af8e9a953"
 });
 
 const messaging = firebase.messaging();
