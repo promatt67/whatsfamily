@@ -120,6 +120,23 @@ if (reloadBtn) {
     });
 }
 
+// AZZERAMENTO BADGE E PULIZIA NOTIFICHE (SPECIFICO PER REALME/ANDROID)
+function azzeraNotificheEBadge() {
+    messaggiNonLettiTotali = 0;
+    if ('clearAppBadge' in navigator) {
+        navigator.clearAppBadge().catch(e => console.log(e));
+    }
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(reg => {
+            if (reg.getNotifications) {
+                reg.getNotifications().then(notifications => {
+                    notifications.forEach(n => n.close());
+                });
+            }
+        });
+    }
+}
+
 // 2. GESTIONE SERVICE WORKER NOTIFICHE PUSH (FCM)
 async function richiediESalvaTokenNotifiche(userId) { 
     try { 
@@ -129,7 +146,6 @@ async function richiediESalvaTokenNotifiche(userId) {
         if (permission === "granted") { 
             const messagingInstance = getMessaging(app); 
             
-            // Registriamo direttamente o usiamo la VAPID Key in modo sicuro
             const tokenCorrente = await getToken(messagingInstance, { 
                 vapidKey: "BHHKBMPf-i-ODMIFw4qYXDHEc0eNyT1GsxDnsjnYUO1z-WR1ffo9W_Eyvt_Id2oi0xwB9W3RdUxKpZcYgVYEx4A"  
             }); 
@@ -140,7 +156,6 @@ async function richiediESalvaTokenNotifiche(userId) {
             } 
         } 
     } catch (err) { 
-        // Cattura l'errore senza far piantare tutta l'interfaccia!
         console.error("Errore Token Notifiche:", err); 
     }
 }
@@ -285,8 +300,7 @@ async function impostaStatoScrittura(idDestinazione) {
 document.addEventListener('visibilitychange', () => { 
     if (document.visibilityState === 'visible') { 
         impostaStatoUtente("🟢 Online"); 
-        if ('clearAppBadge' in navigator) navigator.clearAppBadge().catch(e => console.log(e)); 
-        messaggiNonLettiTotali = 0; 
+        azzeraNotificheEBadge();
     } else { 
         impostaStatoUtente("💤 Offline"); 
         impostaStatoScrittura(null); 
@@ -323,6 +337,7 @@ onAuthStateChanged(auth, async (user) => {
         } catch(e) {} 
 
         richiediESalvaTokenNotifiche(user.uid); 
+        azzeraNotificheEBadge();
 
         onSnapshot(query(collection(db, "users")), (s) => { 
             s.forEach(docSnap => { 
@@ -385,6 +400,7 @@ function caricaContatti() {
             idChatAttiva = ID_SALA_RIUNIONI; 
             const pallino = document.getElementById(`notifica-${ID_SALA_RIUNIONI}`); 
             if (pallino) pallino.style.display = 'none'; 
+            azzeraNotificheEBadge();
             apriStanzaChat("Sala Riunioni", true, null); 
         }); 
         
@@ -432,9 +448,10 @@ function caricaContatti() {
             voceContatto.addEventListener('click', () => { 
                 document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active')); 
                 voceContatto.classList.add('active'); 
-                idChatAttiva = idChatParente; 
+                idChatParente = idChatParente; 
                 const pallino = document.getElementById(`notifica-${idChatParente}`); 
                 if (pallino) pallino.style.display = 'none'; 
+                azzeraNotificheEBadge();
                 apriStanzaChat(nomeContattoPulito, false, parente.uid); 
             }); 
             
@@ -631,18 +648,15 @@ function apriStanzaChat(nomeParente, isGroup = false, idParente = null) {
             badgeReazioniHtml += `</div>`; 
 
             let spunteHtml = ''; 
-if (mioMessaggio && !isGroup) { 
-    if (dati.letto) { 
-        // Doppia spunta blu (Letto)
-        spunteHtml = `<span style="color: #34d399; margin-left: 5px; font-weight: bold; font-size: 0.85rem;" title="Letto">✓✓</span>`; 
-    } else if (dati.consegnato) { 
-        // Doppia spunta grigia (Consegnato ma non ancora aperto)
-        spunteHtml = `<span style="color: var(--text-muted); margin-left: 5px; font-size: 0.85rem;" title="Consegnato">✓✓</span>`; 
-    } else { 
-        // Singola spunta grigia (Inviato sul server)
-        spunteHtml = `<span style="color: var(--text-muted); margin-left: 5px; font-size: 0.85rem;" title="Inviato">✓</span>`; 
-    } 
-}
+            if (mioMessaggio && !isGroup) { 
+                if (dati.letto) { 
+                    spunteHtml = `<span style="color: #34d399; margin-left: 5px; font-weight: bold; font-size: 0.85rem;" title="Letto">✓✓</span>`; 
+                } else if (dati.consegnato) { 
+                    spunteHtml = `<span style="color: var(--text-muted); margin-left: 5px; font-size: 0.85rem;" title="Consegnato">✓✓</span>`; 
+                } else { 
+                    spunteHtml = `<span style="color: var(--text-muted); margin-left: 5px; font-size: 0.85rem;" title="Inviato">✓</span>`; 
+                } 
+            }
 
             const deleteBtnHtml = mioMessaggio ? `<button class="delete-btn" title="Elimina messaggio 🗑️">🗑️</button>` : '';
 
