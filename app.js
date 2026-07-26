@@ -448,7 +448,7 @@ function caricaContatti() {
             voceContatto.addEventListener('click', () => { 
                 document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active')); 
                 voceContatto.classList.add('active'); 
-                idChatParente = idChatParente; 
+                idChatAttiva = idChatParente; // FIX: Assegnato correttamente all'ID della chat attiva!
                 const pallino = document.getElementById(`notifica-${idChatParente}`); 
                 if (pallino) pallino.style.display = 'none'; 
                 azzeraNotificheEBadge();

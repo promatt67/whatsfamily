@@ -19,7 +19,7 @@ const db = firebase.firestore();
 const messaging = firebase.messaging();
 
 // Cache statici (incrementa il numero di versione ad ogni modifica importante)
-const CACHE_NAME = 'whatsfamily-v5.4.1';
+const CACHE_NAME = 'whatsfamily-v5.4.2';
 const urlsToCache = [
   './',
   './index.html',
