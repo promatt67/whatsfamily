@@ -3,9 +3,8 @@
 // ==========================================
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js');
 
-// Inizializzazione Firebase nel Service Worker per Notifiche e Firestore Background
+// Inizializzazione Firebase nel Service Worker (solo per le notifiche push)
 firebase.initializeApp({
   apiKey: "AIzaSyCMBZjMytN2Q9M6P1iT4vMx4q7y_nVgK8w",
   authDomain: "whatsfamily-d8aa6.firebaseapp.com",
@@ -15,11 +14,10 @@ firebase.initializeApp({
   appId: "1:414240543274:web:c9979a6dd3433af8e9a953"
 });
 
-const db = firebase.firestore();
 const messaging = firebase.messaging();
 
 // Cache statici (incrementa il numero di versione ad ogni modifica importante)
-const CACHE_NAME = 'whatsfamily-v5.4.2';
+const CACHE_NAME = 'whatsfamily-v5.4.4';
 const urlsToCache = [
   './',
   './index.html',
@@ -95,22 +93,11 @@ messaging.onBackgroundMessage((payload) => {
 
   const data = payload.data || {};
   const chatId = data.chatId;
-  const messageId = data.messageId;
 
-  // Se la notifica contiene i dati del messaggio, aggiorniamo il campo 'consegnato' su Firestore
-  if (chatId && messageId) {
-    db.collection('chats')
-      .doc(chatId)
-      .collection('messages')
-      .doc(messageId)
-      .update({ consegnato: true })
-      .then(() => {
-        console.log(`[service-worker.js] Stato messaggio ${messageId} aggiornato a CONSEGNATO`);
-      })
-      .catch((error) => {
-        console.error('[service-worker.js] Errore aggiornamento consegnato:', error);
-      });
-  }
+  // NOTA: l'aggiornamento del flag "consegnato" su Firestore avviene lato client
+  // in app.js (attivaAscoltoBackground), non da qui: questa istanza del worker
+  // non ha un utente autenticato, quindi una scrittura diretta su Firestore
+  // fallirebbe silenziosamente se le Security Rules richiedono request.auth != null.
 
   const notificationTitle = payload.notification?.title || data.title || '💬 WhatsFamily 🏡';
   const notificationOptions = {
