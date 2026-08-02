@@ -145,18 +145,34 @@ async function richiediESalvaTokenNotifiche(userId) {
         const permission = await Notification.requestPermission(); 
         if (permission === "granted") { 
             const messagingInstance = getMessaging(app); 
-            
+
+            // Attende ESPLICITAMENTE il nostro service worker (service-worker.js) già registrato,
+            // invece di lasciare che Firebase Messaging ne cerchi/registri uno di default
+            // (firebase-messaging-sw.js, che non esiste più nel progetto). Senza questo,
+            // su dispositivi lenti la richiesta di token può partire prima che il nostro
+            // service worker sia pronto, causando un fallback fallito e nessun token salvato.
+            const swRegistration = await navigator.serviceWorker.ready;
+
             const tokenCorrente = await getToken(messagingInstance, { 
-                vapidKey: "BHHKBMPf-i-ODMIFw4qYXDHEc0eNyT1GsxDnsjnYUO1z-WR1ffo9W_Eyvt_Id2oi0xwB9W3RdUxKpZcYgVYEx4A"  
+                vapidKey: "BHHKBMPf-i-ODMIFw4qYXDHEc0eNyT1GsxDnsjnYUO1z-WR1ffo9W_Eyvt_Id2oi0xwB9W3RdUxKpZcYgVYEx4A",
+                serviceWorkerRegistration: swRegistration
             }); 
             
             if (tokenCorrente) { 
                 console.log("Token FCM generato con successo!");
-                await updateDoc(doc(db, "users", userId), { fcmToken: tokenCorrente }); 
+                await updateDoc(doc(db, "users", userId), { fcmToken: tokenCorrente, ultimoErroreToken: null }); 
             } 
-        } 
+        } else {
+            // Permesso non concesso: lo registriamo su Firestore per poterlo controllare
+            // da remoto (Console Firebase) senza bisogno di collegare il telefono.
+            await updateDoc(doc(db, "users", userId), { ultimoErroreToken: `Permesso notifiche: ${permission}` }).catch(() => {});
+        }
     } catch (err) { 
         console.error("Errore Token Notifiche:", err); 
+        // Salviamo il messaggio di errore su Firestore per poterlo leggere da remoto
+        try {
+            await updateDoc(doc(db, "users", userId), { ultimoErroreToken: String(err && err.message || err) });
+        } catch (_) {}
     }
 }
 
