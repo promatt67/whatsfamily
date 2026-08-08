@@ -15,10 +15,17 @@ exports.gestisciNotificheChat = onDocumentCreated("chats/{chatId}/messages/{mess
     if (!datiMessaggio) return null;
 
     const chatId = event.params.chatId;
-    const messageId = event.params.messageId; // 👈 Recuperiamo l'ID del messaggio
+    const messageId = event.params.messageId;
     const senderId = datiMessaggio.senderId;
 
     try {
+        // 1. REGISTRAZIONE SERVER DELLA SPUNTA DI CONSEGNA (✓✓)
+        // Il server imposta 'consegnato: true' subito. Chi invia vede immediatamente la doppia spunta grigia,
+        // anche se il telefono del destinatario è a schermo spento o in risparmio energetico.
+        await db.collection("chats").doc(chatId).collection("messages").doc(messageId).update({
+            consegnato: true
+        }).catch(() => {});
+
         // Recupera nome mittente
         const mittenteSnap = await db.collection("users").doc(senderId).get();
         const nomeMittente = mittenteSnap.exists ? ((mittenteSnap.data() || {}).nome || "Qualcuno") : "Un familiare";
@@ -49,15 +56,11 @@ exports.gestisciNotificheChat = onDocumentCreated("chats/{chatId}/messages/{mess
 
             const payloadGruppo = {
                 tokens: tokens,
-                // FIX: niente campo "notification" di primo livello - solo "data".
-                // Così il browser NON mostra la notifica in automatico e viene sempre
-                // eseguito onBackgroundMessage() nel service worker, che gestisce
-                // sia la visualizzazione che l'aggiornamento di "consegnato" su Firestore.
                 data: {
                     title: `🏠 Sala Riunioni (${nomeMittente})`,
                     body: testoNotifica,
                     chatId: chatId,
-                    messageId: messageId, // 👈 Fondamentale per la spunta del Service Worker
+                    messageId: messageId,
                     icon: "./icon001.png"
                 },
                 android: {
@@ -67,10 +70,20 @@ exports.gestisciNotificheChat = onDocumentCreated("chats/{chatId}/messages/{mess
                 apns: {
                     payload: { aps: { sound: "default", badge: 1, "content-available": 1 } }
                 },
+                // 2. WEBPUSH CON NOTIFICATION NATIVA
+                // Garantisce la sveglia del sistema operativo a schermo spento su Xiaomi/Realme
                 webpush: {
                     headers: { 
                         Urgency: "high",
-                        TTL: "86400" // Conserva la notifica per 24h se il cell è offline
+                        TTL: "86400"
+                    },
+                    notification: {
+                        title: `🏠 Sala Riunioni (${nomeMittente})`,
+                        body: testoNotifica,
+                        icon: "./icon001.png",
+                        badge: "./icon001.png",
+                        vibrate: [200, 100, 200],
+                        requireInteraction: true
                     },
                     fcmOptions: {
                         link: "./index.html"
@@ -125,13 +138,11 @@ exports.gestisciNotificheChat = onDocumentCreated("chats/{chatId}/messages/{mess
 
             const payloadPrivato = {
                 token: tokenFCM,
-                // FIX: come sopra, niente "notification" di primo livello - solo "data",
-                // per forzare sempre il passaggio da onBackgroundMessage() lato client.
                 data: {
                     title: `💬 ${nomeMittente}`,
                     body: testoNotifica,
                     chatId: chatId,
-                    messageId: messageId, // 👈 Fondamentale per la spunta del Service Worker
+                    messageId: messageId,
                     icon: "./icon001.png"
                 },
                 android: {
@@ -145,6 +156,14 @@ exports.gestisciNotificheChat = onDocumentCreated("chats/{chatId}/messages/{mess
                     headers: { 
                         Urgency: "high",
                         TTL: "86400"
+                    },
+                    notification: {
+                        title: `💬 ${nomeMittente}`,
+                        body: testoNotifica,
+                        icon: "./icon001.png",
+                        badge: "./icon001.png",
+                        vibrate: [200, 100, 200],
+                        requireInteraction: true
                     },
                     fcmOptions: {
                         link: "./index.html"
